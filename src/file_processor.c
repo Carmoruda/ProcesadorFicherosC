@@ -9,12 +9,12 @@
 /// @brief Estructura que contiene la información del archivo de configuración
 struct config_file
 {
-    char path_files[100];
-    char inventory_file[100];
-    char log_file[100];
-    int num_processes;
-    int simulate_sleep_max;
-    int simulate_sleep_min;
+    char path_files[100];     // Directorio de archivos
+    char inventory_file[100]; // Fichero consolidado
+    char log_file[100];       // Fichero de log
+    int num_processes;        // Número de procesos
+    int simulate_sleep_max;   // Tiempo máximo de simulación
+    int simulate_sleep_min;   // Tiempo mínimo de simulación
 } config_file;
 
 /// @brief Leer la información del archivo de configuración
