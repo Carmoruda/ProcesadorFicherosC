@@ -53,16 +53,20 @@ int main()
         switch (directorio->d_name[4])
         {
         case '1':
-            pthread_create(&th1, NULL, hilo1, NULL);
+            pthread_create(&th1, NULL, hilo1, NULL); // Crear hilo 1
+            pthread_join(th1, NULL);                 // Esperar a que el hilo 1 termine
             break;
         case '2':
-            pthread_create(&th2, NULL, hilo2, NULL);
+            pthread_create(&th2, NULL, hilo2, NULL); // Crear hilo 2
+            pthread_join(th2, NULL);                 // Esperar a que el hilo 2 termine
             break;
         case '3':
-            pthread_create(&th3, NULL, hilo3, NULL);
+            pthread_create(&th3, NULL, hilo3, NULL); // Crear hilo 3
+            pthread_join(th3, NULL);                 // Esperar a que el hilo 3 termine
             break;
         case '4':
-            pthread_create(&th4, NULL, hilo4, NULL);
+            pthread_create(&th4, NULL, hilo4, NULL); // Crear hilo 4
+            pthread_join(th4, NULL);                 // Esperar a que el hilo 4 termine
             break;
         default:
             break;
@@ -74,19 +78,23 @@ int main()
 }
 void *hilo1(void *arg)
 {
-    printf("Hilo 1\n");
+    printf("Hilo 1\n"); // Imprimir mensaje
+    pthread_exit(NULL); // Terminar hilo 1
 }
 void *hilo2(void *arg)
 {
-    printf("Hilo 2\n");
+    printf("Hilo 2\n"); // Imprimir mensaje
+    pthread_exit(NULL); // Terminar hilo 2
 }
 void *hilo3(void *arg)
 {
-    printf("Hilo 3\n");
+    printf("Hilo 3\n"); // Imprimir mensaje
+    pthread_exit(NULL); // Terminar hilo 3
 }
 void *hilo4(void *arg)
 {
-    printf("Hilo 4\n");
+    printf("Hilo 4\n"); // Imprimir mensaje
+    pthread_exit(NULL); // Terminar hilo 4
 }
 int readConfigFile(FILE *pf_config)
 {
