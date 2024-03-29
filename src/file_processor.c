@@ -7,6 +7,15 @@
 
 #define CONFIG_PATH "../fp.conf" // Ruta del archivo de configuración
 
+pthread_cond_t cond;   // Variable de condición de los hilos
+pthread_mutex_t mutex; // Mutex para la exclusión mutua
+
+typedef struct sucursal_file
+{
+    char file_name[100]; // Nombre del fichero
+    int sucursal_number; // Número de la sucursal
+} sucursal_file;
+
 /// @brief Estructura que contiene la información del archivo de configuración
 struct config_file
 {
@@ -18,18 +27,27 @@ struct config_file
     int simulate_sleep_min;   // Tiempo mínimo de simulación
 } config_file;
 
+sucursal_file archivos[100];
+int contador;
+
 /// @brief Leer la información del archivo de configuración
 /// @param pf_config Archivo de configuración
-/// @return 0 si se ejecuta correctamente
-int readConfigFile(FILE *pf_config);
+void readConfigFile(FILE *pf_config);
 
-void *hilo1(void *arg);
-void *hilo2(void *arg);
-void *hilo3(void *arg);
-void *hilo4(void *arg);
+/// @brief Lee un nuevo archivo del directorio
+void *reader();
+
+/// @brief Crea un nuevo archivo
+/// @param file_name Nombre del archivo
+/// @param sucursal_number Número de la sucursal
+void newFile(char *file_name, int sucursal_number);
 
 int main()
 {
+    contador = 0;
+    pthread_cond_init(&cond, NULL);
+    pthread_mutex_init(&mutex, NULL);
+
     // Leer archivo de configuración
     FILE *file = fopen(CONFIG_PATH, "r");
     readConfigFile(file);
@@ -53,55 +71,42 @@ int main()
         switch (directorio->d_name[4])
         {
         case '1':
-            pthread_create(&th1, NULL, hilo1, NULL); // Crear hilo 1
-            pthread_join(th1, NULL);                 // Esperar a que el hilo 1 termine
+            newFile(directorio->d_name, 1);           // Añadimos un archivo de la sucursal 1 a la lista
+            pthread_create(&th1, NULL, reader, NULL); // Crear hilo 1
+            pthread_join(th1, NULL);                  // Esperar a que el hilo 1 termine
+            printf("Hilo 1 ha procesado archivo\n");
             break;
         case '2':
-            pthread_create(&th2, NULL, hilo2, NULL); // Crear hilo 2
-            pthread_join(th2, NULL);                 // Esperar a que el hilo 2 termine
+            newFile(directorio->d_name, 2);           // Añadimos un archivo de la sucursal 2 a la lista
+            pthread_create(&th2, NULL, reader, NULL); // Crear hilo 2
+            pthread_join(th2, NULL);                  // Esperar a que el hilo 2 termine
+            printf("Hilo 2 ha procesado archivo\n");
             break;
         case '3':
-            pthread_create(&th3, NULL, hilo3, NULL); // Crear hilo 3
-            pthread_join(th3, NULL);                 // Esperar a que el hilo 3 termine
+            newFile(directorio->d_name, 3);           // Añadimos un archivo de la sucursal 3 a la lista
+            pthread_create(&th3, NULL, reader, NULL); // Crear hilo 3
+            pthread_join(th3, NULL);                  // Esperar a que el hilo 3 termine
+            printf("Hilo 3 ha procesado archivo\n");
             break;
         case '4':
-            pthread_create(&th4, NULL, hilo4, NULL); // Crear hilo 4
-            pthread_join(th4, NULL);                 // Esperar a que el hilo 4 termine
+            newFile(directorio->d_name, 4);           // Añadimos un archivo de la sucursal 4 a la lista
+            pthread_create(&th4, NULL, reader, NULL); // Crear hilo 4
+            pthread_join(th4, NULL);                  // Esperar a que el hilo 4 termine
+            printf("Hilo 4 ha procesado archivo\n");
             break;
         default:
             break;
         }
     }
-
-    printf("Hilos creados\n");
     return 0;
 }
-void *hilo1(void *arg)
-{
-    printf("Hilo 1\n"); // Imprimir mensaje
-    pthread_exit(NULL); // Terminar hilo 1
-}
-void *hilo2(void *arg)
-{
-    printf("Hilo 2\n"); // Imprimir mensaje
-    pthread_exit(NULL); // Terminar hilo 2
-}
-void *hilo3(void *arg)
-{
-    printf("Hilo 3\n"); // Imprimir mensaje
-    pthread_exit(NULL); // Terminar hilo 3
-}
-void *hilo4(void *arg)
-{
-    printf("Hilo 4\n"); // Imprimir mensaje
-    pthread_exit(NULL); // Terminar hilo 4
-}
-int readConfigFile(FILE *pf_config)
+
+void readConfigFile(FILE *pf_config)
 {
     int contador = 0;
     char line[256];
 
-    while (fgets(line, sizeof(line), pf_config))
+    while (fgets(line, sizeof(line), pf_config)) // Leer línea por línea el archivo de configuración.
     {
         char *token = strtok(line, "="); // Separar la línea por el signo de igual.
 
@@ -138,5 +143,41 @@ int readConfigFile(FILE *pf_config)
             token = strtok(NULL, " "); // Siguiente palabra.
         }
     }
-    return contador;
+}
+
+void newFile(char *file_name, int sucursal_number)
+{
+    sucursal_file *nueva_sucursal = (sucursal_file *)malloc(sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
+
+    strcpy(nueva_sucursal->file_name, file_name);      // Copiamos el nombre del fichero
+    nueva_sucursal->sucursal_number = sucursal_number; // Copiamos el número de la sucursal
+
+    // Bloqueamos el mutex para evitar problemas de concurrencia
+    pthread_mutex_lock(&mutex);
+
+    // Agregamos el archivo a la lista de archivos
+    archivos[contador] = *nueva_sucursal;
+    contador++;
+
+    // Desbloqueamos el mutex
+    pthread_mutex_unlock(&mutex);
+
+    // Avisamos a los hilos que deben comprar si hay un nuevo archivo
+    pthread_cond_signal(&cond);
+}
+
+void *reader()
+{
+    pthread_mutex_lock(&mutex); // Bloquear el mutex
+
+    while (contador == 0) // Mientras no haya archivos
+    {
+        pthread_cond_wait(&cond, &mutex); // Esperar a que haya archivos
+    }
+
+    printf("Archivo leído: %s\n", archivos[contador - 1].file_name);
+
+    pthread_mutex_unlock(&mutex); // Desbloquear el mutex
+
+    pthread_exit(NULL); // Salir del hilo
 }
