@@ -5,6 +5,7 @@
 #include <string.h>
 #include <dirent.h>
 
+#define DATA_PATH "../data/"
 #define CONFIG_PATH "../fp.conf" // Ruta del archivo de configuración
 
 pthread_cond_t cond;   // Variable de condición de los hilos
@@ -45,6 +46,8 @@ void newFile(char *file_name, int sucursal_number);
 int main()
 {
     contador = 0;
+    char dataPath[100];
+    strcpy(dataPath, DATA_PATH);
     pthread_cond_init(&cond, NULL);
     pthread_mutex_init(&mutex, NULL);
 
@@ -65,39 +68,40 @@ int main()
         printf("Error al abrir el directorio.");
         return -1;
     }
-
-    while (directorio = readdir(folder))
+    while (1)
     {
-        switch (directorio->d_name[4])
+        while (directorio = readdir(folder))
         {
-        case '1':
-            newFile(directorio->d_name, 1);           // Añadimos un archivo de la sucursal 1 a la lista
-            pthread_create(&th1, NULL, reader, NULL); // Crear hilo 1
-            pthread_join(th1, NULL);                  // Esperar a que el hilo 1 termine
-            printf("Hilo 1 ha procesado archivo\n");
-            break;
-        case '2':
-            newFile(directorio->d_name, 2);           // Añadimos un archivo de la sucursal 2 a la lista
-            pthread_create(&th2, NULL, reader, NULL); // Crear hilo 2
-            pthread_join(th2, NULL);                  // Esperar a que el hilo 2 termine
-            printf("Hilo 2 ha procesado archivo\n");
-            break;
-        case '3':
-            newFile(directorio->d_name, 3);           // Añadimos un archivo de la sucursal 3 a la lista
-            pthread_create(&th3, NULL, reader, NULL); // Crear hilo 3
-            pthread_join(th3, NULL);                  // Esperar a que el hilo 3 termine
-            printf("Hilo 3 ha procesado archivo\n");
-            break;
-        case '4':
-            newFile(directorio->d_name, 4);           // Añadimos un archivo de la sucursal 4 a la lista
-            pthread_create(&th4, NULL, reader, NULL); // Crear hilo 4
-            pthread_join(th4, NULL);                  // Esperar a que el hilo 4 termine
-            printf("Hilo 4 ha procesado archivo\n");
-            break;
-        default:
-            break;
+            switch (directorio->d_name[4])
+            {
+            case '1':
+                newFile(directorio->d_name, 1);           // Añadimos un archivo de la sucursal 1 a la lista
+                pthread_create(&th1, NULL, reader, NULL); // Crear hilo 1
+                break;
+            case '2':
+                newFile(directorio->d_name, 2);           // Añadimos un archivo de la sucursal 2 a la lista
+                pthread_create(&th2, NULL, reader, NULL); // Crear hilo 2
+                break;
+            case '3':
+                newFile(directorio->d_name, 3);           // Añadimos un archivo de la sucursal 3 a la lista
+                pthread_create(&th3, NULL, reader, NULL); // Crear hilo 3
+                break;
+            case '4':
+                newFile(directorio->d_name, 4);           // Añadimos un archivo de la sucursal 4 a la lista
+                pthread_create(&th4, NULL, reader, NULL); // Crear hilo 4
+                break;
+            default:
+                break;
+            }
+
+            strcat(dataPath, directorio->d_name); // Concatenar el nombre del archivo al path
+            remove(dataPath);                     // Eliminar el archivo
+
+            strcpy(dataPath, DATA_PATH);
+            sleep(1);
         }
     }
+
     return 0;
 }
 
@@ -175,9 +179,15 @@ void *reader()
         pthread_cond_wait(&cond, &mutex); // Esperar a que haya archivos
     }
 
+    // Hilo del Patron 1
+
     printf("Archivo leído: %s\n", archivos[contador - 1].file_name);
 
     pthread_mutex_unlock(&mutex); // Desbloquear el mutex
 
     pthread_exit(NULL); // Salir del hilo
+}
+
+void patron1(void *arg)
+{
 }
