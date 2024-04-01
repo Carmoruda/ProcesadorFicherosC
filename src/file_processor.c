@@ -5,12 +5,12 @@
 #include <string.h>
 #include <dirent.h>
 
-#define DATA_PATH "../data/"
 #define CONFIG_PATH "../fp.conf" // Ruta del archivo de configuración
 
 pthread_cond_t cond;   // Variable de condición de los hilos
 pthread_mutex_t mutex; // Mutex para la exclusión mutua
 
+/// @brief Estructura que contiene la información de los archivos de las sucursales
 typedef struct sucursal_file
 {
     char file_name[100]; // Nombre del fichero
@@ -46,8 +46,11 @@ void newFile(char *file_name, int sucursal_number);
 int main()
 {
     contador = 0;
+
     char dataPath[100];
-    strcpy(dataPath, DATA_PATH);
+    strcpy(dataPath, config_file.path_files);
+    strcat(dataPath, "/");
+
     pthread_cond_init(&cond, NULL);
     pthread_mutex_init(&mutex, NULL);
 
@@ -95,9 +98,10 @@ int main()
             }
 
             strcat(dataPath, directorio->d_name); // Concatenar el nombre del archivo al path
-            remove(dataPath);                     // Eliminar el archivo
+            // remove(dataPath);                     // Eliminar el archivo
 
-            strcpy(dataPath, DATA_PATH);
+            strcpy(dataPath, config_file.path_files);
+            strcat(dataPath, "/");
             sleep(1);
         }
     }
