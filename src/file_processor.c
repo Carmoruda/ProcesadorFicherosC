@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
+#include <time.h>
 
 #define CONFIG_PATH "./fp.conf" // Ruta del archivo de configuración
 
@@ -15,6 +16,7 @@ typedef struct sucursal_file
 {
     char file_name[100]; // Nombre del fichero
     int sucursal_number; // Número de la sucursal
+    int num_operations;  // Número de operaciones realizadas
 } sucursal_file;
 
 /// @brief Estructura que contiene la información del archivo de configuración
@@ -27,9 +29,6 @@ struct config_file
     int simulate_sleep_max;   // Tiempo máximo de simulación
     int simulate_sleep_min;   // Tiempo mínimo de simulación
 } config_file;
-
-sucursal_file archivos[100];
-int contador;
 
 /// @brief Leer la información del archivo de configuración
 /// @param pf_config Archivo de configuración
@@ -48,7 +47,6 @@ void processFiles();
 
 int main()
 {
-    contador = 0;
     sucursal_file *nueva_sucursal;
 
     char dataPath[100];
@@ -164,16 +162,7 @@ sucursal_file *newFile(char *file_name, int sucursal_number)
 
     strcpy(nueva_sucursal->file_name, file_name);      // Copiamos el nombre del fichero
     nueva_sucursal->sucursal_number = sucursal_number; // Copiamos el número de la sucursal
-
-    // Bloqueamos el mutex para evitar problemas de concurrencia
-    pthread_mutex_lock(&mutex);
-
-    // Agregamos el archivo a la lista de archivos
-    archivos[contador] = *nueva_sucursal;
-    contador++;
-
-    // Desbloqueamos el mutex
-    pthread_mutex_unlock(&mutex);
+    nueva_sucursal->num_operations = 0;                // Inicializamos el número de operaciones
 
     // Avisamos a los hilos que deben comprar si hay un nuevo archivo
     pthread_cond_signal(&cond);
@@ -185,11 +174,7 @@ void *reader(void *file)
 {
     pthread_mutex_lock(&mutex); // Bloquear el mutex
 
-    while (contador == 0) // Mientras no haya archivos
-    {
-        pthread_cond_wait(&cond, &mutex); // Esperar a que haya archivos
-    }
-
+    processFiles((sucursal_file *)file); // Procesar el archivo
     printf("Archivo leído: %s\n", ((sucursal_file *)file)->file_name);
 
     pthread_mutex_unlock(&mutex); // Desbloquear el mutex
@@ -197,6 +182,53 @@ void *reader(void *file)
     pthread_exit(NULL); // Salir del hilo
 }
 
-void patron1(void *arg)
+void processFiles(sucursal_file *file)
 {
+    char line[256];                // Línea del fichero
+    time_t time_date = time(NULL); // Dato de tiempo
+    char control;                  // Control de lectura
+
+    char dataPath[100];
+    strcpy(dataPath, config_file.path_files);
+    strcat(dataPath, "/");
+
+    FILE *sucursal_file = fopen(strcat(dataPath, file->file_name), "r"); // Archivo sucursal a procesar
+    FILE *log_file = fopen(config_file.log_file, "a");                   // Archivo de log
+    FILE *consolidated_file = fopen(config_file.inventory_file, "a");    // Archivo consolidado
+
+    if (file == NULL)
+    {
+        printf("Error al abrir el archivo de la sucursal.\n");
+        return;
+    }
+
+    if (log_file == NULL)
+    {
+        printf("Error al abrir el archivo de log.\n");
+        return;
+    }
+
+    if (consolidated_file == NULL)
+    {
+        printf("Error al abrir el archivo consolidado.\n");
+        return;
+    }
+
+    // Formato fichero sucursal     -> ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
+    // Formato fichero consolidado  -> ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
+    // Formato fichero log          -> DD/MM/AAAA:::HH:MM:SS:::INICIO:::FIN:::NOMBRE_FICHERO:::NUMOPERACIONESCONSOLIDADAS
+
+    // Bucle que leerá el fichero hasta que no haya más información.
+    while (fgets(line, sizeof(line), sucursal_file))
+    {
+        fprintf(consolidated_file, "%d;%s", file->sucursal_number, line); // Escribir en el fichero consolidado
+        file->num_operations++;                                           // Incrementar el número de operaciones
+    }
+
+    struct tm current_time = *localtime(&time_date);                                                                                                                                                                                         // Fecha y hora actual
+    fprintf(log_file, "%d/%d/%d:::%d:%d:%d:::%s:::%d\n", current_time.tm_mday, current_time.tm_mon + 1, current_time.tm_year + 1900, current_time.tm_hour, current_time.tm_min, current_time.tm_sec, file->file_name, file->num_operations); // Escribir en el archivo de log
+
+    fclose(sucursal_file);
+    fclose(log_file);
+    fclose(consolidated_file);
 }
