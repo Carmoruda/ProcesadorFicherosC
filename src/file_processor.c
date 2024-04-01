@@ -5,7 +5,7 @@
 #include <string.h>
 #include <dirent.h>
 
-#define CONFIG_PATH "../fp.conf" // Ruta del archivo de configuración
+#define CONFIG_PATH "./fp.conf" // Ruta del archivo de configuración
 
 pthread_cond_t cond;   // Variable de condición de los hilos
 pthread_mutex_t mutex; // Mutex para la exclusión mutua
@@ -38,14 +38,18 @@ void readConfigFile(FILE *pf_config);
 /// @brief Lee un nuevo archivo del directorio
 void *reader();
 
-/// @brief Crea un nuevo archivo
+/// @brief Crea un nuevo archivo de una sucursal
 /// @param file_name Nombre del archivo
 /// @param sucursal_number Número de la sucursal
-void newFile(char *file_name, int sucursal_number);
+/// @return Puntero al archivo de la sucursal
+sucursal_file *newFile(char *file_name, int sucursal_number);
+
+void processFiles();
 
 int main()
 {
     contador = 0;
+    sucursal_file *nueva_sucursal;
 
     char dataPath[100];
     strcpy(dataPath, config_file.path_files);
@@ -71,6 +75,7 @@ int main()
         printf("Error al abrir el directorio.");
         return -1;
     }
+
     while (1)
     {
         while (directorio = readdir(folder))
@@ -78,20 +83,20 @@ int main()
             switch (directorio->d_name[4])
             {
             case '1':
-                newFile(directorio->d_name, 1);           // Añadimos un archivo de la sucursal 1 a la lista
-                pthread_create(&th1, NULL, reader, NULL); // Crear hilo 1
+                nueva_sucursal = newFile(directorio->d_name, 1);    // Añadimos un archivo de la sucursal 1 a la lista
+                pthread_create(&th1, NULL, reader, nueva_sucursal); // Crear hilo 1
                 break;
             case '2':
-                newFile(directorio->d_name, 2);           // Añadimos un archivo de la sucursal 2 a la lista
-                pthread_create(&th2, NULL, reader, NULL); // Crear hilo 2
+                nueva_sucursal = newFile(directorio->d_name, 2);    // Añadimos un archivo de la sucursal 2 a la lista
+                pthread_create(&th2, NULL, reader, nueva_sucursal); // Crear hilo 2
                 break;
             case '3':
-                newFile(directorio->d_name, 3);           // Añadimos un archivo de la sucursal 3 a la lista
-                pthread_create(&th3, NULL, reader, NULL); // Crear hilo 3
+                nueva_sucursal = newFile(directorio->d_name, 3);    // Añadimos un archivo de la sucursal 3 a la lista
+                pthread_create(&th3, NULL, reader, nueva_sucursal); // Crear hilo 3
                 break;
             case '4':
-                newFile(directorio->d_name, 4);           // Añadimos un archivo de la sucursal 4 a la lista
-                pthread_create(&th4, NULL, reader, NULL); // Crear hilo 4
+                nueva_sucursal = newFile(directorio->d_name, 4);    // Añadimos un archivo de la sucursal 4 a la lista
+                pthread_create(&th4, NULL, reader, nueva_sucursal); // Crear hilo 4
                 break;
             default:
                 break;
@@ -153,7 +158,7 @@ void readConfigFile(FILE *pf_config)
     }
 }
 
-void newFile(char *file_name, int sucursal_number)
+sucursal_file *newFile(char *file_name, int sucursal_number)
 {
     sucursal_file *nueva_sucursal = (sucursal_file *)malloc(sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
 
@@ -172,9 +177,11 @@ void newFile(char *file_name, int sucursal_number)
 
     // Avisamos a los hilos que deben comprar si hay un nuevo archivo
     pthread_cond_signal(&cond);
+
+    return nueva_sucursal;
 }
 
-void *reader()
+void *reader(void *file)
 {
     pthread_mutex_lock(&mutex); // Bloquear el mutex
 
@@ -183,9 +190,7 @@ void *reader()
         pthread_cond_wait(&cond, &mutex); // Esperar a que haya archivos
     }
 
-    // Hilo del Patron 1
-
-    printf("Archivo leído: %s\n", archivos[contador - 1].file_name);
+    printf("Archivo leído: %s\n", ((sucursal_file *)file)->file_name);
 
     pthread_mutex_unlock(&mutex); // Desbloquear el mutex
 
