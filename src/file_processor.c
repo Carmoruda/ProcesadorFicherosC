@@ -43,7 +43,9 @@ void *reader();
 /// @return Puntero al archivo de la sucursal
 sucursal_file *newFile(char *file_name, int sucursal_number);
 
-void processFiles();
+/// @brief Procesa los ficheros de las sucursales y los escribe en los ficheros de log y consolidado
+/// @param file Archivo de la sucursal a procesar
+void processFiles(sucursal_file *file);
 
 int main()
 {
