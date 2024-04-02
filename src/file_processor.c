@@ -234,3 +234,14 @@ void processFiles(sucursal_file *file)
     fclose(log_file);
     fclose(consolidated_file);
 }
+
+void notifyNewFile(){
+    printf("###               ###   ############   ###                           ###\n");
+    printf("### ###           ###   ############    ###                         ###\n");
+    printf("###   ###         ###   ###              ###                       ###\n");
+    printf("###     ###       ###   ############      ###                     ###\n");
+    printf("###       ###     ###   ############       ###        ###        ###\n");
+    printf("###         ###   ###   ###                 ###     ### ###     ###\n");
+    printf("###           ### ###   ############         ### ###       ### ###\n");
+    printf("###               ###   ############          ###            ###\n");
+}
