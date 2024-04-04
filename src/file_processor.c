@@ -2,11 +2,15 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <dirent.h>
 #include <time.h>
+#include <sys/inotify.h>
 
 #define CONFIG_PATH "./fp.conf" // Ruta del archivo de configuración
+#define EVENT_SIZE (sizeof(struct inotify_event)) //Tamaño de los eventos
+#define BUFFER_LENGTH (1024 * (EVENT_SIZE + 16)) //Tamaño del buffer para eventos
 
 pthread_cond_t cond;   // Variable de condición de los hilos
 pthread_mutex_t mutex; // Mutex para la exclusión mutua
@@ -47,6 +51,12 @@ sucursal_file *newFile(char *file_name, int sucursal_number);
 /// @param file Archivo de la sucursal a procesar
 void processFiles(sucursal_file *file);
 
+/// @brief Verifca la llegada de nuevos archivos al directorio común
+void* verifyNewFile();
+
+/// @brief Muestra por pantalla un mensaje al llegar nuevo archivo al directorio común
+void notifyNewFile();
+
 int main()
 {
     sucursal_file *nueva_sucursal;
@@ -74,6 +84,14 @@ int main()
     {
         printf("Error al abrir el directorio.");
         return -1;
+    }
+
+    //Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
+    pthread_t newFileThread;
+    int controler;
+    controler = pthread_create(&newFileThread, NULL, verifyNewFile, NULL);
+    if(controler < 0){
+        printf("Error al crear hilo verifier");
     }
 
     while (1)
@@ -235,7 +253,46 @@ void processFiles(sucursal_file *file)
     fclose(consolidated_file);
 }
 
+void* verifyNewFile(){
+    int fileDescriptor, watchDescriptor;
+    char buffer[BUFFER_LENGTH];    
+   
+    //Se inicializa el descriptor del inotify
+    fileDescriptor = inotify_init();
+    if(fileDescriptor < 0){ //Se comprueba que se inicialice el descriptor
+        printf("Error initializing inotify descriptor");
+        exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
+    }
+    //Se establece el directorio a monitorear
+    watchDescriptor = inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
+    if(watchDescriptor < 0){ //Se comprueba que se inicialice el watcher
+        printf("Error initializing inotify watcher");
+        exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
+    }
+    //Se queda a la espera de eventos
+    while(1){
+        int length, i = 0;
+        //Se leen los bytes del evento
+        length = read(fileDescriptor, buffer, BUFFER_LENGTH);
+        if(length < 0){ //Se comprueba que se inicialice correctamente
+        printf("Error initializing inotify length");
+        exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
+        }
+
+        //Se procesan los eventos
+        while (i < length)
+        {
+            struct inotify_event *event = (struct inotify_event *)&buffer[i]; //Se interpreta los datos del buffer como eventos
+            if(event->mask & IN_CREATE){ //Se comprueba si se ha creado un nuevo archivo
+                notifyNewFile();
+            }
+            i += EVENT_SIZE + event->len; //Se actualiza el tamaño
+        }
+    }
+}
+
 void notifyNewFile(){
+    printf("\n\n\n");
     printf("###               ###   ############   ###                           ###\n");
     printf("### ###           ###   ############    ###                         ###\n");
     printf("###   ###         ###   ###              ###                       ###\n");
@@ -244,4 +301,5 @@ void notifyNewFile(){
     printf("###         ###   ###   ###                 ###     ### ###     ###\n");
     printf("###           ### ###   ############         ### ###       ### ###\n");
     printf("###               ###   ############          ###            ###\n");
+    printf("\n\n\n");
 }
