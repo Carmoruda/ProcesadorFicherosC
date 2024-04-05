@@ -6,6 +6,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <time.h>
+#include <semaphore.h>
 #include <sys/inotify.h>
 
 #define CONFIG_PATH "./fp.conf" // Ruta del archivo de configuración
@@ -14,6 +15,8 @@
 
 pthread_cond_t cond;   // Variable de condición de los hilos
 pthread_mutex_t mutex; // Mutex para la exclusión mutua
+
+sem_t sem_thread_creation;
 
 /// @brief Estructura que contiene la información de los archivos de las sucursales
 typedef struct sucursal_file
@@ -94,6 +97,9 @@ int main()
         printf("Error al crear hilo verifier");
     }
 
+    // Se inicializa un semáforo para sincronizar el procesado de archivos
+    sem_init(&sem_thread_creation, 0, config_file.num_processes);
+
     while (1)
     {
         while (directorio = readdir(folder))
@@ -102,19 +108,27 @@ int main()
             {
             case '1':
                 nueva_sucursal = newFile(directorio->d_name, 1);    // Añadimos un archivo de la sucursal 1 a la lista
+                sem_wait(&sem_thread_creation);
                 pthread_create(&th1, NULL, reader, nueva_sucursal); // Crear hilo 1
+                sem_post(&sem_thread_creation);
                 break;
             case '2':
                 nueva_sucursal = newFile(directorio->d_name, 2);    // Añadimos un archivo de la sucursal 2 a la lista
+                sem_wait(&sem_thread_creation);
                 pthread_create(&th2, NULL, reader, nueva_sucursal); // Crear hilo 2
+                sem_post(&sem_thread_creation);
                 break;
             case '3':
                 nueva_sucursal = newFile(directorio->d_name, 3);    // Añadimos un archivo de la sucursal 3 a la lista
+                sem_wait(&sem_thread_creation);
                 pthread_create(&th3, NULL, reader, nueva_sucursal); // Crear hilo 3
+                sem_post(&sem_thread_creation);
                 break;
             case '4':
                 nueva_sucursal = newFile(directorio->d_name, 4);    // Añadimos un archivo de la sucursal 4 a la lista
+                sem_wait(&sem_thread_creation);
                 pthread_create(&th4, NULL, reader, nueva_sucursal); // Crear hilo 4
+                sem_post(&sem_thread_creation);
                 break;
             default:
                 break;
