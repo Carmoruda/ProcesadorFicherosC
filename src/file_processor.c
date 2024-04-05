@@ -93,7 +93,7 @@ int main()
     pthread_t newFileThread;
     int controler;
     controler = pthread_create(&newFileThread, NULL, verifyNewFile, NULL);
-    if(controler < 0){
+    if(controler < 0) {
         printf("Error al crear hilo verifier");
     }
 
@@ -270,37 +270,37 @@ void processFiles(sucursal_file *file)
     fclose(consolidated_file);
 }
 
-void* verifyNewFile(){
+void* verifyNewFile() {
     int fileDescriptor, watchDescriptor;
-    char buffer[BUFFER_LENGTH];    
-   
+    char buffer[BUFFER_LENGTH];
+
     //Se inicializa el descriptor del inotify
     fileDescriptor = inotify_init();
-    if(fileDescriptor < 0){ //Se comprueba que se inicialice el descriptor
+    if(fileDescriptor < 0) { //Se comprueba que se inicialice el descriptor
         printf("Error initializing inotify descriptor");
         exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
     }
     //Se establece el directorio a monitorear
     watchDescriptor = inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
-    if(watchDescriptor < 0){ //Se comprueba que se inicialice el watcher
+    if(watchDescriptor < 0) { //Se comprueba que se inicialice el watcher
         printf("Error initializing inotify watcher");
         exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
     }
     //Se queda a la espera de eventos
-    while(1){
+    while(1) {
         int length, i = 0;
         //Se leen los bytes del evento
         length = read(fileDescriptor, buffer, BUFFER_LENGTH);
-        if(length < 0){ //Se comprueba que se inicialice correctamente
-        printf("Error initializing inotify length");
-        exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
+        if(length < 0) { //Se comprueba que se inicialice correctamente
+            printf("Error initializing inotify length");
+            exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
         }
 
         //Se procesan los eventos
         while (i < length)
         {
             struct inotify_event *event = (struct inotify_event *)&buffer[i]; //Se interpreta los datos del buffer como eventos
-            if(event->mask & IN_CREATE){ //Se comprueba si se ha creado un nuevo archivo
+            if(event->mask & IN_CREATE) { //Se comprueba si se ha creado un nuevo archivo
                 notifyNewFile();
             }
             i += EVENT_SIZE + event->len; //Se actualiza el tamaño
@@ -308,7 +308,7 @@ void* verifyNewFile(){
     }
 }
 
-void notifyNewFile(){
+void notifyNewFile() {
     printf("\n\n\n");
     printf("###               ###   ############   ###                           ###\n");
     printf("### ###           ###   ############    ###                         ###\n");
