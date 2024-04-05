@@ -192,6 +192,9 @@ sucursal_file *newFile(char *file_name, int sucursal_number)
 
 void *reader(void *file)
 {
+    //Se establece simulación de espera
+    srand(time(NULL));
+    sleep(rand() % config_file.simulate_sleep_max + config_file.simulate_sleep_min);
     pthread_mutex_lock(&mutex); // Bloquear el mutex
 
     processFiles((sucursal_file *)file); // Procesar el archivo
