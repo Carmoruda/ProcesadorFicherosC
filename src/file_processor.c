@@ -286,14 +286,14 @@ void *verifyNewFile()
     // Se inicializa el descriptor del inotify
     fileDescriptor = inotify_init();
     if (fileDescriptor < 0)
-    { // Se comprueba que se inicialice el descriptor
+    {   // Se comprueba que se inicialice el descriptor
         printf("Error initializing inotify descriptor");
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
     // Se establece el directorio a monitorear
     watchDescriptor = inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
     if (watchDescriptor < 0)
-    { // Se comprueba que se inicialice el watcher
+    {   // Se comprueba que se inicialice el watcher
         printf("Error initializing inotify watcher");
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -304,7 +304,7 @@ void *verifyNewFile()
         // Se leen los bytes del evento
         length = read(fileDescriptor, buffer, BUFFER_LENGTH);
         if (length < 0)
-        { // Se comprueba que se inicialice correctamente
+        {   // Se comprueba que se inicialice correctamente
             printf("Error initializing inotify length");
             exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
         }
@@ -314,7 +314,7 @@ void *verifyNewFile()
         {
             struct inotify_event *event = (struct inotify_event *)&buffer[i]; // Se interpreta los datos del buffer como eventos
             if (event->mask & IN_CREATE)
-            { // Se comprueba si se ha creado un nuevo archivo
+            {   // Se comprueba si se ha creado un nuevo archivo
                 notifyNewFile();
 
                 closedir(folder);                         // Cerrar el directorio
