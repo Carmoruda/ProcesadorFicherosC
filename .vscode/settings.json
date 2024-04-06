@@ -8,6 +8,9 @@
         "stdbool.h": "c",
         "stdlib.h": "c",
         "string.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "dirent.h": "c",
+        "show_information.h": "c",
+        "common_structures.h": "c"
     }
 }
