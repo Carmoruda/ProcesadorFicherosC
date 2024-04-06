@@ -13,14 +13,14 @@ do
   echo $lines
   sucursal=$((RANDOM % 3 + 1))
   sucursal=$(printf "SU%03d" $sucursal)
-  echo $sucursal
+  echo "$sucursal"
   users=$((RANDOM % 10 + 1))
   echo $users
   operation=$((RANDOM % 8 + 1))
   operation=$(printf "OPE%02d" $operation)
-  echo $operation
+  echo "$operation"
 
-  ./generateData -l $lines -s $sucursal -t $operation -u $users
+  ./generateData -l $lines -s "$sucursal" -t "$operation" -u $users
   simulated_delay=$((RANDOM % 20))
   sleep $simulated_delay
 done
