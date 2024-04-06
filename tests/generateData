@@ -7,7 +7,7 @@ generateDate() {
     printf "%02d%02d%04d" $day $month $year
 }
  
-while getopts ":l:lines:s:sucursal:t:type:u:users:h:help" opt; do
+while getopts ":l:s:t:u:h" opt; do
  
  case $opt in
    l | lines)
@@ -26,13 +26,13 @@ while getopts ":l:lines:s:sucursal:t:type:u:users:h:help" opt; do
      echo ""
      echo "Description: Create a new file located at the common directory. (To change directory´s location, modify fp.conf)"
      echo ""
-     echo "Syntax: scriptTemplate [-l|s|t|u|h] or [-lines|sucursal|type|users|help"
+     echo "Syntax: scriptTemplate [-l|s|t|u|h] or [--lines|sucursal|type|users|help"
      echo ""
      echo "Options:"
-     echo "         l/lines            Stablish number of lines"
-     echo "         s/sucursal         Stablish sucursal´s ID (From 1 to 4. Exp: -s SU001)"
-     echo "         t/type             Stablish operation type"
-     echo "         u/users            Stablish number of users"
+     echo "         -l, --lines            Stablish number of lines"
+     echo "         -s, --sucursal         Stablish sucursal´s ID (From 1 to 4. Exp: -s SU001)"
+     echo "         -t, --type             Stablish operation type"
+     echo "         -u, --users            Stablish number of users"
      ;;
    ?)  
      echo "Unknown option: -$OPTARG. Use -h to see available options." ;;
