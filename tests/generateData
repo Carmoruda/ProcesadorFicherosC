@@ -1,43 +1,44 @@
 #!/bin/bash
 
 generateDate() {
-    day=$((1 + RANDOM % 28))
-    month=$((1 + RANDOM % 12))
-    year=$((2024 + RANDOM % 5))                                                
-    printf "%02d%02d%04d" "$day" "$month" "$year"
+  day=$((1 + RANDOM % 28))
+  month=$((1 + RANDOM % 12))
+  year=$((2024 + RANDOM % 5))
+  printf "%02d%02d%04d" "$day" "$month" "$year"
 }
- 
+
 while getopts ":l:s:t:u:h" opt; do
- 
- case $opt in
-   l | lines)
-     lines=$OPTARG
-     ;;
-   s | sucursal)  
-     sucursal_number=$OPTARG
-     ;;
-   t | type)  
-     type_operation=$OPTARG
-     ;;
-   u | users)  
-     user_number=$OPTARG
-     ;;
-   h | help)
-     echo ""
-     echo "Description: Create a new file located at the common directory. (To change directory´s location, modify fp.conf)"
-     echo ""
-     echo "Syntax: scriptTemplate [-l|s|t|u|h] or [--lines|sucursal|type|users|help"
-     echo ""
-     echo "Options:"
-     echo "         -l, --lines            Stablish number of lines"
-     echo "         -s, --sucursal         Stablish sucursal´s ID (From 1 to 4. Exp: -s SU001)"
-     echo "         -t, --type             Stablish operation type"
-     echo "         -u, --users            Stablish number of users"
-     ;;
-   ?)  
-     echo "Unknown option: -$OPTARG. Use -h to see available options." ;;
- esac
-done 
+
+  case $opt in
+    l | lines)
+      lines=$OPTARG
+      ;;
+    s | sucursal)
+      sucursal_number=$OPTARG
+      ;;
+    t | type)
+      type_operation=$OPTARG
+      ;;
+    u | users)
+      user_number=$OPTARG
+      ;;
+    h | help)
+      echo ""
+      echo "Description: Create a new file located at the common directory. (To change directory´s location, modify fp.conf)"
+      echo ""
+      echo "Syntax: scriptTemplate [-l|s|t|u|h] or [--lines|sucursal|type|users|help"
+      echo ""
+      echo "Options:"
+      echo "         -l, --lines            Stablish number of lines"
+      echo "         -s, --sucursal         Stablish sucursal´s ID (From 1 to 4. Exp: -s SU001)"
+      echo "         -t, --type             Stablish operation type"
+      echo "         -u, --users            Stablish number of users"
+      ;;
+    ?)
+      echo "Unknown option: -$OPTARG. Use -h to see available options."
+      ;;
+  esac
+done
 
 if [[ -z $lines || -z $sucursal_number || -z $type_operation || -z $user_number ]]; then
   echo "All arguments are mandatory. Use -h to see available options"
@@ -49,19 +50,19 @@ fecha=$(generateDate)
 filename="${sucursal_number}_${type_operation}_$fecha.data"
 
 for ((i = 1; i <= "$lines"; i++)); do
-    random_state=$((RANDOM % 3))
-    case $random_state in
-        0) state="Finalizado" ;;
-        1) state="Correcto" ;;
-        2) state="Error" ;;
-    esac
-    random_sign=$((RANDOM % 2))
-    case $random_sign in
-        0) sign="+" ;;
-        1) sign="-" ;;
-    esac
+  random_state=$((RANDOM % 3))
+  case $random_state in
+    0) state="Finalizado" ;;
+    1) state="Correcto" ;;
+    2) state="Error" ;;
+  esac
+  random_sign=$((RANDOM % 2))
+  case $random_sign in
+    0) sign="+" ;;
+    1) sign="-" ;;
+  esac
 
-echo "$i;$(date '+%Y-%m-%d');$(date '+%Y-%m-%d');$(($RANDOM % $user_number + 1));$type_operation;$((RANDOM % 1000));$sign$((RANDOM % 1000)).$(printf "%02d" $((RANDOM % 100)) )€;$state" 
-done > "../data/$filename"
+  echo "$i;$(date '+%Y-%m-%d');$(date '+%Y-%m-%d');$(($RANDOM % $user_number + 1));$type_operation;$((RANDOM % 1000));$sign$((RANDOM % 1000)).$(printf "%02d" $((RANDOM % 100)))€;$state"
+done >"../data/$filename"
 
 echo "$filename created"

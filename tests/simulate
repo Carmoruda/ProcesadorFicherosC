@@ -7,8 +7,7 @@ chmod +x generateData
 simulated_delay=$((RANDOM % 20))
 sleep "$simulated_delay"
 
-while true
-do
+while true; do
   lines=$((RANDOM % 50 + 1))
   echo "$lines"
   sucursal=$((RANDOM % 3 + 1))
