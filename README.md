@@ -12,6 +12,7 @@ Nombre del proyecto/
 ├── output/
 │   ├── fich_log.log
 │   └── consolidado.csv
+├── processed/
 └── src/
     ├── file_processor.c
     └── fp.conf

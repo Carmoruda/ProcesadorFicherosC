@@ -76,18 +76,10 @@ int main()
     readConfigFile(file);
     pthread_t th1, th2, th3, th4;
 
-    printf("Path files: %s\n", config_file.path_files);
-
-    struct dirent *directorio;
     DIR *folder;
+    struct dirent *directorio = malloc(sizeof(struct dirent));
 
-    folder = opendir(config_file.path_files);
-
-    if (folder == NULL)
-    {
-        printf("Error al abrir el directorio.");
-        return -1;
-    }
+    printf("Path files: %s\n", config_file.path_files);
 
     // Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
     pthread_t newFileThread;
@@ -101,47 +93,62 @@ int main()
     // Se inicializa un semáforo para sincronizar el procesado de archivos
     sem_init(&sem_thread_creation, 0, config_file.num_processes);
 
+    folder = opendir(config_file.path_files);
+
+    if (folder == NULL)
+    {
+        printf("Error al abrir el directorio.");
+        return -1;
+    }
+
     while (1)
     {
-        while (directorio = readdir(folder))
+        while ((directorio = readdir(folder)) != NULL)
         {
-            switch (directorio->d_name[4])
+            if (directorio->d_type == DT_REG) // Comprobar que sea un archivo
             {
-            case '1':
-                nueva_sucursal = newFile(directorio->d_name, 1); // Añadimos un archivo de la sucursal 1 a la lista
-                sem_wait(&sem_thread_creation);
-                pthread_create(&th1, NULL, reader, nueva_sucursal); // Crear hilo 1
-                sem_post(&sem_thread_creation);
-                break;
-            case '2':
-                nueva_sucursal = newFile(directorio->d_name, 2); // Añadimos un archivo de la sucursal 2 a la lista
-                sem_wait(&sem_thread_creation);
-                pthread_create(&th2, NULL, reader, nueva_sucursal); // Crear hilo 2
-                sem_post(&sem_thread_creation);
-                break;
-            case '3':
-                nueva_sucursal = newFile(directorio->d_name, 3); // Añadimos un archivo de la sucursal 3 a la lista
-                sem_wait(&sem_thread_creation);
-                pthread_create(&th3, NULL, reader, nueva_sucursal); // Crear hilo 3
-                sem_post(&sem_thread_creation);
-                break;
-            case '4':
-                nueva_sucursal = newFile(directorio->d_name, 4); // Añadimos un archivo de la sucursal 4 a la lista
-                sem_wait(&sem_thread_creation);
-                pthread_create(&th4, NULL, reader, nueva_sucursal); // Crear hilo 4
-                sem_post(&sem_thread_creation);
-                break;
-            default:
-                break;
+                switch (directorio->d_name[4])
+                {
+                case '1':
+                    nueva_sucursal = newFile(directorio->d_name, 1); // Añadimos un archivo de la sucursal 1 a la lista
+                    sem_wait(&sem_thread_creation);
+                    pthread_create(&th1, NULL, reader, nueva_sucursal); // Crear hilo 1
+                    sem_post(&sem_thread_creation);
+                    break;
+                case '2':
+                    nueva_sucursal = newFile(directorio->d_name, 2); // Añadimos un archivo de la sucursal 2 a la lista
+                    sem_wait(&sem_thread_creation);
+                    pthread_create(&th2, NULL, reader, nueva_sucursal); // Crear hilo 2
+                    sem_post(&sem_thread_creation);
+                    break;
+                case '3':
+                    nueva_sucursal = newFile(directorio->d_name, 3); // Añadimos un archivo de la sucursal 3 a la lista
+                    sem_wait(&sem_thread_creation);
+                    pthread_create(&th3, NULL, reader, nueva_sucursal); // Crear hilo 3
+                    sem_post(&sem_thread_creation);
+                    break;
+                case '4':
+                    nueva_sucursal = newFile(directorio->d_name, 4); // Añadimos un archivo de la sucursal 4 a la lista
+                    sem_wait(&sem_thread_creation);
+                    pthread_create(&th4, NULL, reader, nueva_sucursal); // Crear hilo 4
+                    sem_post(&sem_thread_creation);
+                    break;
+                default:
+                    break;
+                }
+
+                strcat(dataPath, directorio->d_name); // Concatenar el nombre del archivo al path
+                // remove(dataPath);                     // Eliminar el archivo
+
+                strcpy(dataPath, config_file.path_files);
+                strcat(dataPath, "/");
             }
-
-            strcat(dataPath, directorio->d_name); // Concatenar el nombre del archivo al path
-            // remove(dataPath);                     // Eliminar el archivo
-
-            strcpy(dataPath, config_file.path_files);
-            strcat(dataPath, "/");
-            sleep(1);
         }
+
+        // Cerrar el directorio
+        // closedir(folder);
+
+        sleep(1);
     }
 
     return 0;
