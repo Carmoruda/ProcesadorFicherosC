@@ -8,14 +8,22 @@
 #include <stdbool.h>
 #include <semaphore.h>
 #include <sys/inotify.h>
+#include "show_information.h"
+
+#ifndef GENEST
+#include "common_structures.h"
+#define GENEST 1
+#endif
 
 #define CONFIG_PATH "./fp.conf"                   // Ruta del archivo de configuración
 #define EVENT_SIZE (sizeof(struct inotify_event)) // Tamaño de los eventos
 #define BUFFER_LENGTH (1024 * (EVENT_SIZE + 16))  // Tamaño del buffer para eventos
 
-pthread_cond_t cond;       // Variable de condición de los hilos
-pthread_mutex_t mutex;     // Mutex para la exclusión mutua
-sem_t sem_thread_creation; // Semáforo para controlar la creación de hilos
+pthread_cond_t cond;          // Variable de condición de los hilos
+pthread_mutex_t mutex;        // Mutex para la exclusión mutua
+pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
+sem_t sem_thread_creation;    // Semáforo para controlar la creación de hilos
+pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
 
 DIR *folder; // Directorio de archivos de las sucursales
 
@@ -59,9 +67,6 @@ void processFiles(sucursal_file *file);
 /// @brief Verifca la llegada de nuevos archivos al directorio común
 void *verifyNewFile();
 
-/// @brief Muestra por pantalla un mensaje al llegar nuevo archivo al directorio común
-void notifyNewFile();
-
 int main()
 {
     sucursal_file *nueva_sucursal;
@@ -75,6 +80,7 @@ int main()
     // Inicializamos las variables de condición y mutex
     pthread_cond_init(&cond, NULL);
     pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&mutexLogFile, NULL);
 
     // Leer archivo de configuración
     FILE *file = fopen(CONFIG_PATH, "r");
@@ -218,7 +224,6 @@ void *reader(void *file)
     sleep(rand() % config_file.simulate_sleep_max + config_file.simulate_sleep_min);
 
     processFiles((sucursal_file *)file); // Procesar el archivo
-    printf("Archivo leído: %s\n", ((sucursal_file *)file)->file_name);
 
     pthread_exit(NULL); // Salir del hilo
 }
@@ -228,6 +233,8 @@ void processFiles(sucursal_file *file)
     char line[256];                // Línea del fichero
     time_t time_date = time(NULL); // Dato de tiempo
     char control;                  // Control de lectura
+    char logString[600];           // Mensaje a escribir en el log
+    char screenString[600];        // Mensaje a mostrar por pantalla
 
     char dataPath[100];
     char newDataPath[100] = "../processed/";
@@ -235,18 +242,11 @@ void processFiles(sucursal_file *file)
     strcat(dataPath, "/");
 
     FILE *sucursal_file = fopen(strcat(dataPath, file->file_name), "r"); // Archivo sucursal a procesar
-    FILE *log_file = fopen(config_file.log_file, "a");                   // Archivo de log
     FILE *consolidated_file = fopen(config_file.inventory_file, "a");    // Archivo consolidado
 
-    if (file == NULL)
+    if (sucursal_file == NULL)
     {
         printf("Error al abrir el archivo de la sucursal.\n");
-        return;
-    }
-
-    if (log_file == NULL)
-    {
-        printf("Error al abrir el archivo de log.\n");
         return;
     }
 
@@ -258,10 +258,12 @@ void processFiles(sucursal_file *file)
 
     // Formato fichero sucursal    -> ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
     // Formato fichero consolidado -> ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
-    // Formato fichero log         -> D/MM/AAAA:::HH:MM:SS:::INICIO:::FIN:::NOMBRE_FICHERO:::NUMOPERACIONESCONSOLIDADAS
+    // Formato fichero log         -> DD/MM/AAAA:::HH:MM:SS:::INICIO:::FIN:::NOMBRE_FICHERO:::NUMOPERACIONESCONSOLIDADAS
 
     // Bucle que leerá el fichero hasta que no haya más información.
     pthread_mutex_lock(&mutex); // Bloquear el mutex
+
+    struct tm current_time = *localtime(&time_date); // Fecha y hora actual
 
     while (fgets(line, sizeof(line), sucursal_file))
     {
@@ -269,16 +271,16 @@ void processFiles(sucursal_file *file)
         file->num_operations++;                                           // Incrementar el número de operaciones
     }
 
-    struct tm current_time = *localtime(&time_date); // Fecha y hora actual
-
-    fprintf(log_file, "%d/%d/%d:::%d:%d:%d:::%s:::%d\n", current_time.tm_mday,
+    sprintf(logString, "%d/%d/%d:::%d:%d:%d:::%s:::%d", current_time.tm_mday,
             current_time.tm_mon + 1, current_time.tm_year + 1900,
             current_time.tm_hour, current_time.tm_min, current_time.tm_sec,
             file->file_name,
-            file->num_operations); // Escribir en el archivo de log
+            file->num_operations);
+    sprintf(screenString, "Fichero procesado: %s, con %d operaciones consolidadas", file->file_name, file->num_operations);
+
+    printLogScreen(mutexLogFile, config_file.log_file, logString, screenString); // Imprimir en el log
 
     fclose(sucursal_file);
-    fclose(log_file);
     fclose(consolidated_file);
 
     rename(dataPath, strcat(newDataPath, file->file_name)); // Mover el archivo a la carpeta de procesados
@@ -312,6 +314,7 @@ void *verifyNewFile()
     while (1)
     {
         int length, i = 0;
+        time_t time_date = time(NULL); // Dato de tiempo
 
         // Se leen los bytes del evento
         length = read(fileDescriptor, buffer, BUFFER_LENGTH);
@@ -325,30 +328,33 @@ void *verifyNewFile()
         // Se procesan los eventos
         while (i < length)
         {
+            char newNotificationScreen[600] = "\n\n\n"
+                                              "###               ###   ############   ###                           ###\n"
+                                              "### ###           ###   ############    ###                         ###\n"
+                                              "###   ###         ###   ###              ###                       ###\n"
+                                              "###     ###       ###   ############      ###                     ###\n"
+                                              "###       ###     ###   ############       ###        ###        ###\n"
+                                              "###         ###   ###   ###                 ###     ### ###     ###\n"
+                                              "###           ### ###   ############         ### ###       ### ###\n"
+                                              "###               ###   ############          ###            ###\n"
+                                              "\n\n\n";
+
+            char newNotificationLog[600];
+            struct tm current_time = *localtime(&time_date); // Fecha y hora actual
+            sprintf(newNotificationLog, "%d/%d/%d:::%d:%d:%d:::NUEVO FICHERO EN EL DIRECTORIO", current_time.tm_mday,
+                    current_time.tm_mon + 1, current_time.tm_year + 1900,
+                    current_time.tm_hour, current_time.tm_min, current_time.tm_sec);
+
             struct inotify_event *event = (struct inotify_event *)&buffer[i]; // Se interpreta los datos del buffer como eventos
 
             if (event->mask & IN_CREATE) // Se comprueba si se ha creado un nuevo archivo
             {
-                notifyNewFile();
-                closedir(folder);                         // Cerrar el directorio
-                folder = opendir(config_file.path_files); // Abrir el directorio de nuevo
+                printLogScreen(mutexLogFile, config_file.log_file, newNotificationLog, newNotificationScreen); // Imprimir en el log
+                closedir(folder);                                                                              // Cerrar el directorio
+                folder = opendir(config_file.path_files);                                                      // Abrir el directorio de nuevo
             }
 
             i += EVENT_SIZE + event->len; // Se actualiza el tamaño
         }
     }
-}
-
-void notifyNewFile()
-{
-    printf("\n\n\n");
-    printf("###               ###   ############   ###                           ###\n");
-    printf("### ###           ###   ############    ###                         ###\n");
-    printf("###   ###         ###   ###              ###                       ###\n");
-    printf("###     ###       ###   ############      ###                     ###\n");
-    printf("###       ###     ###   ############       ###        ###        ###\n");
-    printf("###         ###   ###   ###                 ###     ### ###     ###\n");
-    printf("###           ### ###   ############         ### ###       ### ###\n");
-    printf("###               ###   ############          ###            ###\n");
-    printf("\n\n\n");
 }
