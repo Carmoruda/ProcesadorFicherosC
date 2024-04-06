@@ -1,0 +1,26 @@
+#!/bin/bash
+
+echo "Simulación iniciada. Pulse Ctrl + C para finalizar"
+
+chmod +x generateData
+
+simulated_delay=$((RANDOM % 20))
+sleep $simulated_delay
+
+while true
+do
+  lines=$((RANDOM % 50 + 1))
+  echo $lines
+  sucursal=$((RANDOM % 3 + 1))
+  sucursal=$(printf "SU%03d" $sucursal)
+  echo $sucursal
+  users=$((RANDOM % 10 + 1))
+  echo $users
+  operation=$((RANDOM % 8 + 1))
+  operation=$(printf "OPE%02d" $operation)
+  echo $operation
+
+  ./generateData -l $lines -s $sucursal -t $operation -u $users
+  simulated_delay=$((RANDOM % 20))
+  sleep $simulated_delay
+done
