@@ -1,5 +1,13 @@
 {
     "files.associations": {
-        "inotify.h": "c"
+        "*.pcss": "css",
+        ".postcssrc": "json",
+        ".styleintrc": "json",
+        "inotify.h": "c",
+        "unistd.h": "c",
+        "stdbool.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c",
+        "stdio.h": "c"
     }
 }
