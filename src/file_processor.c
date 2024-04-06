@@ -13,10 +13,11 @@
 #define EVENT_SIZE (sizeof(struct inotify_event)) // Tamaño de los eventos
 #define BUFFER_LENGTH (1024 * (EVENT_SIZE + 16))  // Tamaño del buffer para eventos
 
-pthread_cond_t cond;   // Variable de condición de los hilos
-pthread_mutex_t mutex; // Mutex para la exclusión mutua
+pthread_cond_t cond;       // Variable de condición de los hilos
+pthread_mutex_t mutex;     // Mutex para la exclusión mutua
+sem_t sem_thread_creation; // Semáforo para controlar la creación de hilos
 
-sem_t sem_thread_creation;
+DIR *folder; // Directorio de archivos de las sucursales
 
 /// @brief Estructura que contiene la información de los archivos de las sucursales
 typedef struct sucursal_file
@@ -76,7 +77,6 @@ int main()
     readConfigFile(file);
     pthread_t th1, th2, th3, th4;
 
-    DIR *folder;
     struct dirent *directorio = malloc(sizeof(struct dirent));
 
     printf("Path files: %s\n", config_file.path_files);
@@ -144,9 +144,6 @@ int main()
                 strcat(dataPath, "/");
             }
         }
-
-        // Cerrar el directorio
-        // closedir(folder);
 
         sleep(1);
     }
@@ -319,6 +316,9 @@ void *verifyNewFile()
             if (event->mask & IN_CREATE)
             { // Se comprueba si se ha creado un nuevo archivo
                 notifyNewFile();
+
+                closedir(folder);                         // Cerrar el directorio
+                folder = opendir(config_file.path_files); // Abrir el directorio de nuevo
             }
             i += EVENT_SIZE + event->len; // Se actualiza el tamaño
         }
