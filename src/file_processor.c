@@ -9,9 +9,9 @@
 #include <semaphore.h>
 #include <sys/inotify.h>
 
-#define CONFIG_PATH "./fp.conf" // Ruta del archivo de configuración
-#define EVENT_SIZE (sizeof(struct inotify_event)) //Tamaño de los eventos
-#define BUFFER_LENGTH (1024 * (EVENT_SIZE + 16)) //Tamaño del buffer para eventos
+#define CONFIG_PATH "./fp.conf"                   // Ruta del archivo de configuración
+#define EVENT_SIZE (sizeof(struct inotify_event)) // Tamaño de los eventos
+#define BUFFER_LENGTH (1024 * (EVENT_SIZE + 16))  // Tamaño del buffer para eventos
 
 pthread_cond_t cond;   // Variable de condición de los hilos
 pthread_mutex_t mutex; // Mutex para la exclusión mutua
@@ -55,7 +55,7 @@ sucursal_file *newFile(char *file_name, int sucursal_number);
 void processFiles(sucursal_file *file);
 
 /// @brief Verifca la llegada de nuevos archivos al directorio común
-void* verifyNewFile();
+void *verifyNewFile();
 
 /// @brief Muestra por pantalla un mensaje al llegar nuevo archivo al directorio común
 void notifyNewFile();
@@ -89,11 +89,12 @@ int main()
         return -1;
     }
 
-    //Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
+    // Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
     pthread_t newFileThread;
     int controler;
     controler = pthread_create(&newFileThread, NULL, verifyNewFile, NULL);
-    if(controler < 0){
+    if (controler < 0)
+    {
         printf("Error al crear hilo verifier");
     }
 
@@ -107,25 +108,25 @@ int main()
             switch (directorio->d_name[4])
             {
             case '1':
-                nueva_sucursal = newFile(directorio->d_name, 1);    // Añadimos un archivo de la sucursal 1 a la lista
+                nueva_sucursal = newFile(directorio->d_name, 1); // Añadimos un archivo de la sucursal 1 a la lista
                 sem_wait(&sem_thread_creation);
                 pthread_create(&th1, NULL, reader, nueva_sucursal); // Crear hilo 1
                 sem_post(&sem_thread_creation);
                 break;
             case '2':
-                nueva_sucursal = newFile(directorio->d_name, 2);    // Añadimos un archivo de la sucursal 2 a la lista
+                nueva_sucursal = newFile(directorio->d_name, 2); // Añadimos un archivo de la sucursal 2 a la lista
                 sem_wait(&sem_thread_creation);
                 pthread_create(&th2, NULL, reader, nueva_sucursal); // Crear hilo 2
                 sem_post(&sem_thread_creation);
                 break;
             case '3':
-                nueva_sucursal = newFile(directorio->d_name, 3);    // Añadimos un archivo de la sucursal 3 a la lista
+                nueva_sucursal = newFile(directorio->d_name, 3); // Añadimos un archivo de la sucursal 3 a la lista
                 sem_wait(&sem_thread_creation);
                 pthread_create(&th3, NULL, reader, nueva_sucursal); // Crear hilo 3
                 sem_post(&sem_thread_creation);
                 break;
             case '4':
-                nueva_sucursal = newFile(directorio->d_name, 4);    // Añadimos un archivo de la sucursal 4 a la lista
+                nueva_sucursal = newFile(directorio->d_name, 4); // Añadimos un archivo de la sucursal 4 a la lista
                 sem_wait(&sem_thread_creation);
                 pthread_create(&th4, NULL, reader, nueva_sucursal); // Crear hilo 4
                 sem_post(&sem_thread_creation);
@@ -206,15 +207,12 @@ sucursal_file *newFile(char *file_name, int sucursal_number)
 
 void *reader(void *file)
 {
-    //Se establece simulación de espera
+    // Se establece simulación de espera
     srand(time(NULL));
     sleep(rand() % config_file.simulate_sleep_max + config_file.simulate_sleep_min);
-    pthread_mutex_lock(&mutex); // Bloquear el mutex
 
     processFiles((sucursal_file *)file); // Procesar el archivo
     printf("Archivo leído: %s\n", ((sucursal_file *)file)->file_name);
-
-    pthread_mutex_unlock(&mutex); // Desbloquear el mutex
 
     pthread_exit(NULL); // Salir del hilo
 }
@@ -226,6 +224,7 @@ void processFiles(sucursal_file *file)
     char control;                  // Control de lectura
 
     char dataPath[100];
+    char newDataPath[100] = "../processed/";
     strcpy(dataPath, config_file.path_files);
     strcat(dataPath, "/");
 
@@ -256,6 +255,8 @@ void processFiles(sucursal_file *file)
     // Formato fichero log          -> DD/MM/AAAA:::HH:MM:SS:::INICIO:::FIN:::NOMBRE_FICHERO:::NUMOPERACIONESCONSOLIDADAS
 
     // Bucle que leerá el fichero hasta que no haya más información.
+    pthread_mutex_lock(&mutex); // Bloquear el mutex
+
     while (fgets(line, sizeof(line), sucursal_file))
     {
         fprintf(consolidated_file, "%d;%s", file->sucursal_number, line); // Escribir en el fichero consolidado
@@ -268,47 +269,57 @@ void processFiles(sucursal_file *file)
     fclose(sucursal_file);
     fclose(log_file);
     fclose(consolidated_file);
+
+    rename(dataPath, strcat(newDataPath, file->file_name)); // Mover el archivo a la carpeta de procesados
+    pthread_mutex_unlock(&mutex);                           // Desbloquear el mutex
 }
 
-void* verifyNewFile(){
+void *verifyNewFile()
+{
     int fileDescriptor, watchDescriptor;
-    char buffer[BUFFER_LENGTH];    
-   
-    //Se inicializa el descriptor del inotify
+    char buffer[BUFFER_LENGTH];
+
+    // Se inicializa el descriptor del inotify
     fileDescriptor = inotify_init();
-    if(fileDescriptor < 0){ //Se comprueba que se inicialice el descriptor
+    if (fileDescriptor < 0)
+    { // Se comprueba que se inicialice el descriptor
         printf("Error initializing inotify descriptor");
-        exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
+        exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
-    //Se establece el directorio a monitorear
+    // Se establece el directorio a monitorear
     watchDescriptor = inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
-    if(watchDescriptor < 0){ //Se comprueba que se inicialice el watcher
+    if (watchDescriptor < 0)
+    { // Se comprueba que se inicialice el watcher
         printf("Error initializing inotify watcher");
-        exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
+        exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
-    //Se queda a la espera de eventos
-    while(1){
+    // Se queda a la espera de eventos
+    while (1)
+    {
         int length, i = 0;
-        //Se leen los bytes del evento
+        // Se leen los bytes del evento
         length = read(fileDescriptor, buffer, BUFFER_LENGTH);
-        if(length < 0){ //Se comprueba que se inicialice correctamente
-        printf("Error initializing inotify length");
-        exit(EXIT_FAILURE); //Si no se inincializa, avisa y finaliza el proceso con error
+        if (length < 0)
+        { // Se comprueba que se inicialice correctamente
+            printf("Error initializing inotify length");
+            exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
         }
 
-        //Se procesan los eventos
+        // Se procesan los eventos
         while (i < length)
         {
-            struct inotify_event *event = (struct inotify_event *)&buffer[i]; //Se interpreta los datos del buffer como eventos
-            if(event->mask & IN_CREATE){ //Se comprueba si se ha creado un nuevo archivo
+            struct inotify_event *event = (struct inotify_event *)&buffer[i]; // Se interpreta los datos del buffer como eventos
+            if (event->mask & IN_CREATE)
+            { // Se comprueba si se ha creado un nuevo archivo
                 notifyNewFile();
             }
-            i += EVENT_SIZE + event->len; //Se actualiza el tamaño
+            i += EVENT_SIZE + event->len; // Se actualiza el tamaño
         }
     }
 }
 
-void notifyNewFile(){
+void notifyNewFile()
+{
     printf("\n\n\n");
     printf("###               ###   ############   ###                           ###\n");
     printf("### ###           ###   ############    ###                         ###\n");
