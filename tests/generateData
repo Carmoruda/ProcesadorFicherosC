@@ -4,7 +4,7 @@ generateDate() {
     day=$((1 + RANDOM % 28))
     month=$((1 + RANDOM % 12))
     year=$((2024 + RANDOM % 5))                                                
-    printf "%02d%02d%04d" $day $month $year
+    printf "%02d%02d%04d" "$day" "$month" "$year"
 }
  
 while getopts ":l:lines:s:sucursal:t:type:u:users:h:help" opt; do
@@ -46,9 +46,9 @@ fi
 
 fecha=$(generateDate)
 
-filename="${sucursal_number}_${type_operation}_${fecha}.data"
+filename="${sucursal_number}_${type_operation}_$fecha.data"
 
-for ((i = 1; i <= $lines; i++)); do
+for ((i = 1; i <= "$lines"; i++)); do
     random_state=$((RANDOM % 3))
     case $random_state in
         0) state="Finalizado" ;;
