@@ -13,6 +13,8 @@
 #define CONFIG_PATH "./fp.conf"                   // Ruta del archivo de configuración
 #define EVENT_SIZE (sizeof(struct inotify_event)) // Tamaño de los eventos
 #define BUFFER_LENGTH (1024 * (EVENT_SIZE + 16))  // Tamaño del buffer para eventos
+#define MAX_LINE_LENGTH 100
+#define MAX_RECORDS 1000
 
 pthread_cond_t cond;           // Variable de condición de los hilos
 pthread_mutex_t mutex;         // Mutex para la exclusión mutua
@@ -30,6 +32,18 @@ typedef struct sucursal_file
     int sucursal_number; // Número de la sucursal
     int num_operations;  // Número de operaciones realizadas
 } sucursal_file;
+
+struct Operacion
+{
+    int IdOperacion;
+    char FECHA_INICIO[20];
+    char FECHA_FIN[20];
+    int IdUsuario;
+    int IdTipoOperacion;
+    int NoOperacion;
+    float Importe;
+    char Estado[20];
+};
 
 /// @brief Estructura que contiene la información del archivo de configuración
 struct config_file
@@ -72,6 +86,9 @@ int checkPatternsProcess();
 int processFilesProcess();
 
 void *pattern1();
+int superaLimiteOperaciones(struct Operacion *registros, int inicio, int fin);
+int comparar_registros(const void *a, const void *b);
+
 void *pattern2();
 void *pattern3();
 void *pattern4();
@@ -415,10 +432,145 @@ int processFilesProcess()
     return 0;
 }
 
+// --- Pattern 1 ---
+
 void *pattern1()
 {
-    printf("Patron1\n");
+    char *nombreArchivo = config_file.inventory_file;
+
+    // Abrir el archivo en modo lectura y escritura
+    FILE *archivo = fopen(nombreArchivo, "r+");
+    if (archivo == NULL)
+    {
+        perror("Error al abrir el archivo");
+        pthread_exit(NULL);
+    }
+
+    // Bloquear el mutex antes de acceder al archivo
+    pthread_mutex_lock(&mutexPatterns);
+
+    // Leer los registros del archivo y almacenarlos en una matriz
+    struct Operacion registros[MAX_RECORDS];
+    int num_registros = 0;
+    char linea[MAX_LINE_LENGTH];
+    while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS)
+    {
+        sscanf(linea, "%d;%[^;];%[^;];%d;%d;%d;%f;%s",
+               &registros[num_registros].IdOperacion,
+               registros[num_registros].FECHA_INICIO,
+               registros[num_registros].FECHA_FIN,
+               &registros[num_registros].IdUsuario,
+               &registros[num_registros].IdTipoOperacion,
+               &registros[num_registros].NoOperacion,
+               &registros[num_registros].Importe,
+               registros[num_registros].Estado);
+        num_registros++;
+    }
+
+    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+
+    int i = 0;
+    while (i < num_registros)
+    {
+        int idUsuarioActual = registros[i].IdUsuario;
+        int j = i + 1;
+        while (j < num_registros && registros[j].IdUsuario == idUsuarioActual)
+        {
+            // Verificar si se superan las 5 operaciones por hora
+            if (superaLimiteOperaciones(registros, i, j))
+            {
+                // Mostrar las operaciones realizadas por el usuario
+                printf("Usuario %d ha realizado más de 5 operaciones en menos de 1 hora:\n", idUsuarioActual);
+                for (int k = i; k < j; k++)
+                {
+                    printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
+                           registros[k].IdOperacion,
+                           registros[k].FECHA_INICIO,
+                           registros[k].FECHA_FIN,
+                           registros[k].IdUsuario,
+                           registros[k].IdTipoOperacion,
+                           registros[k].NoOperacion,
+                           registros[k].Importe,
+                           registros[k].Estado);
+                }
+                break; // Salir del bucle interno
+            }
+            j++;
+        }
+        i = j;
+    }
+    // Mostrar los registros ordenados por pantalla
+    for (int i = 0; i < num_registros; i++)
+    {
+        printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
+               registros[i].IdOperacion,
+               registros[i].FECHA_INICIO,
+               registros[i].FECHA_FIN,
+               registros[i].IdUsuario,
+               registros[i].IdTipoOperacion,
+               registros[i].NoOperacion,
+               registros[i].Importe,
+               registros[i].Estado);
+    }
+
+    // Desbloquear el mutex después de acceder al archivo
+    pthread_mutex_unlock(&mutexPatterns);
+
+    // Cerrar el archivo
+    fclose(archivo);
+
+    pthread_exit(NULL);
 }
+
+int comparar_registros(const void *a, const void *b)
+{
+    const struct Operacion *registro1 = (const struct Operacion *)a;
+    const struct Operacion *registro2 = (const struct Operacion *)b;
+    // Primero comparamos por IdUsuario
+    if (registro1->IdUsuario != registro2->IdUsuario)
+    {
+        return registro1->IdUsuario - registro2->IdUsuario;
+    }
+    else
+    {
+        // Si los IdUsuario son iguales, comparamos por FechaIni
+        return strcmp(registro1->FECHA_INICIO, registro2->FECHA_INICIO);
+    }
+}
+
+// Función para verificar si se superan las 5 operaciones por hora
+int superaLimiteOperaciones(struct Operacion *registros, int inicio, int fin)
+{
+    int contadorOperaciones = 1;
+    for (int i = inicio + 1; i < fin; i++)
+    {
+        // Calcular la diferencia de tiempo entre operaciones adyacentes
+        struct tm tm1, tm2;
+        strptime(registros[i - 1].FECHA_INICIO, "%d/%m/%Y %H:%M", &tm1);
+        strptime(registros[i].FECHA_INICIO, "%d/%m/%Y %H:%M", &tm2);
+        time_t tiempo1 = mktime(&tm1);
+        time_t tiempo2 = mktime(&tm2);
+        double diferenciaTiempo = difftime(tiempo2, tiempo1);
+
+        // Si la diferencia de tiempo es menor o igual a una hora, incrementar el contador de operaciones
+        if (diferenciaTiempo <= 3600)
+        { // 3600 segundos = 1 hora
+            contadorOperaciones++;
+            // Si el contador supera 5, retornar verdadero
+            if (contadorOperaciones > 5)
+            {
+                return 1;
+            }
+        }
+        else
+        {
+            // Si la diferencia de tiempo es mayor a una hora, reiniciar el contador
+            contadorOperaciones = 1;
+        }
+    }
+}
+
+/// --- Pattern 2 ---
 
 void *pattern2()
 {
