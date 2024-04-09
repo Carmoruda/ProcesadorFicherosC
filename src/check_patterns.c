@@ -65,14 +65,14 @@ void *pattern1(void *arg)
     // Mostrar los registros ordenados por pantalla
     for (int i = 0; i < num_registros; i++) {
         printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                registros[i].IdOperacion,
-                registros[i].FECHA_INICIO,
-                registros[i].FECHA_FIN,
-                registros[i].IdUsuario,
-                registros[i].IdTipoOperacion,
-                registros[i].NoOperacion,
-                registros[i].Importe,
-                registros[i].Estado);
+               registros[i].IdOperacion,
+               registros[i].FECHA_INICIO,
+               registros[i].FECHA_FIN,
+               registros[i].IdUsuario,
+               registros[i].IdTipoOperacion,
+               registros[i].NoOperacion,
+               registros[i].Importe,
+               registros[i].Estado);
     }
 
     // Desbloquear el mutex después de acceder al archivo
@@ -114,7 +114,7 @@ int comparar_registros(const void *a, const void *b) {
     return registro1->IdUsuario != registro2->IdUsuario ? registro1->IdUsuario - registro2->IdUsuario : strcmp(registro1->FECHA_INICIO, registro2->FECHA_INICIO);
 }
 
-int readConsolidatedFile(void *arg, struct Operacion registros[MAX_RECORDS]){
+int readConsolidatedFile(void *arg, struct Operacion registros[MAX_RECORDS]) {
     sucursal_file *ficheroCSV = (char *)arg;
 
     // Abrir el archivo en modo lectura y escritura
@@ -155,9 +155,9 @@ int enLaMismaHora(char* fecha1, char* fecha2)
     unsigned long long int minutos = diferencia / 60;
     diferencia -= 60 * minutos;
 
-    if(diferencia <= 3600){
-      return 1;
-    }else{
-      return 0;
+    if(diferencia <= 3600) {
+        return 1;
+    } else {
+        return 0;
     }
 }
