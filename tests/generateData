@@ -49,7 +49,7 @@ fecha=$(generateDate)
 
 fileNumber=$((RANDOM % 100))
 
-filename="${sucursal_number}_${type_operation}_${fecha}_${fileNumber}.data"
+filename="${sucursal_number}_${type_operation}_${fecha}_$fileNumber.data"
 
 for ((i = 1; i <= "$lines"; i++)); do
   random_state=$((RANDOM % 3))
@@ -64,7 +64,7 @@ for ((i = 1; i <= "$lines"; i++)); do
     1) sign="-" ;;
   esac
 
-operationId=$(printf "OPE%03d" $i)
+operationId=$(printf "OPE%03d" "$i")
 
 
 echo "$operationId;$(date '+%Y-%m-%d');$(date '+%Y-%m-%d');$(($RANDOM % $user_number + 1));$type_operation;$((RANDOM % 1000));$sign$((RANDOM % 1000)).$(printf "%02d" $((RANDOM % 100)) )€;$state" 
