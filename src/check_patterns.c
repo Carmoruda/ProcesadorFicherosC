@@ -61,3 +61,37 @@ void *pattern5()
 {
     // Lógica de comprobación de patrón 5
 }
+/*
+void readConsolidatedFile(){
+    sucursal_file *ficheroCSV = (char *)arg;
+
+    // Abrir el archivo en modo lectura y escritura
+    FILE *archivo = fopen(ficheroCSV, "r+");
+    if (archivo == NULL) {
+        perror("Error al abrir el archivo");
+        pthread_exit(NULL);
+    }
+
+    // Bloquear el mutex antes de acceder al archivo
+    pthread_mutex_lock(&mutex);
+
+    // Leer los registros del archivo y almacenarlos en una matriz
+    struct Operacion registros[MAX_RECORDS];
+    int num_registros = 0;
+    char linea[MAX_LINE_LENGTH];
+    while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS) {
+        sscanf(linea, "%d;%[^;];%[^;];%d;%d;%d;%f;%s",
+               &registros[num_registros].IdOperacion,
+               registros[num_registros].FECHA_INICIO,
+               registros[num_registros].FECHA_FIN,
+               &registros[num_registros].IdUsuario,
+               &registros[num_registros].IdTipoOperacion,
+               &registros[num_registros].NoOperacion,
+               &registros[num_registros].Importe,
+               registros[num_registros].Estado);
+        num_registros++;
+    }
+
+    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+}
+*/

@@ -8,22 +8,26 @@
 #include <stdbool.h>
 #include <semaphore.h>
 #include <sys/inotify.h>
-#include "../include/show_information.h"
-#include "../include/error_messages.h"
-#include "../include/check_patterns.h"
+#include "../include/program_data.h"
 
-#define CONFIG_PATH "./fp.conf"                   // Ruta del archivo de configuración
-#define EVENT_SIZE (sizeof(struct inotify_event)) // Tamaño de los eventos
-#define BUFFER_LENGTH (1024 * (EVENT_SIZE + 16))  // Tamaño del buffer para eventos
-#define MAX_LINE_LENGTH 100
-#define MAX_RECORDS 1000
+
 
 pthread_cond_t cond;          // Variable de condición de los hilos
 pthread_mutex_t mutex;        // Mutex para la exclusión mutua
 pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
 sem_t sem_thread_creation;    // Semáforo para controlar la creación de hilos
+pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
+pthread_mutex_t mutexPatrones;
 
 DIR *folder; // Directorio de archivos de las sucursales
+
+/// @brief Estructura que contiene la información de los archivos de las sucursales
+typedef struct sucursal_file
+{
+    char file_name[100]; // Nombre del fichero
+    int sucursal_number; // Número de la sucursal
+    int num_operations;  // Número de operaciones realizadas
+} sucursal_file;
 
 /// @brief Estructura que contiene la información del archivo de configuración
 struct config_file
@@ -36,16 +40,8 @@ struct config_file
     int simulate_sleep_min;   // Tiempo mínimo de simulación
 } config_file;
 
-/// @brief Estructura que contiene la información de los archivos de las sucursales
-typedef struct sucursal_file
-{
-    char file_name[100]; // Nombre del fichero
-    int sucursal_number; // Número de la sucursal
-    int num_operations;  // Número de operaciones realizadas
-} sucursal_file;
-
-struct Operacion
-{
+///@brief Estructura para representar cada registro del archivo CSV
+struct Operacion {
     int IdOperacion;
     char FECHA_INICIO[20];
     char FECHA_FIN[20];
@@ -55,10 +51,19 @@ struct Operacion
     float Importe;
     char Estado[20];
 };
-
 /// @brief Leer la información del archivo de configuración
 /// @param pf_config Archivo de configuración
 void readConfigFile(FILE *pf_config);
+
+/// @brief Leer la información del archivo de configuración
+/// @param registros Vector de estructuras con todas las operaciones extraidas del .csv
+/// @param inicio Variables para controlar que se cumplan las condiciones
+/// @param fin Variables para controlar que se cumplan las condiciones
+int superaLimiteOperaciones(struct Operacion *registros, int inicio, int fin);
+
+/// @brief Detectar si se produce el patron numero 1 en el fichero consolidado
+/// @param arg Archivo de proceso consolidado
+void patron1(void *arg);
 
 /// @brief Lee un nuevo archivo del directorio
 void *reader();
@@ -74,33 +79,239 @@ sucursal_file *newFile(char *file_name, int sucursal_number);
 /// @param file Archivo de la sucursal a procesar
 void processFiles(sucursal_file *file);
 
-/// @brief Verifica la llegada de nuevos archivos al directorio común
+/// @brief Verifca la llegada de nuevos archivos al directorio común
 void *verifyNewFile();
-
-/// @brief Gestiona la lógica de procesamiento de los archivos
-/// @return 0 si todo ha ido bien, -1 si ha habido un error
-int processFilesProcess();
 
 int main()
 {
+    sucursal_file *nueva_sucursal;
+    int pid_patrones;
+    // Path a los archivos
+    char dataPath[100];
+    strcpy(dataPath, config_file.path_files);
+    strcat(dataPath, "/");
+    struct dirent *directorio = malloc(sizeof(struct dirent));
+
+    // Inicializamos las variables de condición y mutex
+    pthread_cond_init(&cond, NULL);
+    pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&mutexLogFile, NULL);
+
     // Leer archivo de configuración
     FILE *file = fopen(CONFIG_PATH, "r");
     readConfigFile(file);
 
-    // Proceso comprobar patrones
-    pid_t proceso_patrones;
+    // Inicializar hilos
+    pthread_t th1, th2, th3, th4, p1, p2, p3;
 
-    proceso_patrones = fork();
-    if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
+    printf("Path files: %s\n", config_file.path_files);
+
+    // Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
+    pthread_t newFileThread;
+    int controler;
+    controler = pthread_create(&newFileThread, NULL, verifyNewFile, NULL);
+
+    if (controler < 0)
     {
-        processFilesProcess();
+        printf("Error al crear hilo verifier");
     }
-    else if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
+
+    // Se inicializa un semáforo para sincronizar el procesado de archivos
+    sem_init(&sem_thread_creation, 0, config_file.num_processes);
+
+    folder = opendir(config_file.path_files);
+
+    if (folder == NULL)
     {
-        checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
+        printf("Error al abrir el directorio.");
+        return -1;
+    }
+
+    while (1)
+    {
+        while ((directorio = readdir(folder)) != NULL)
+        {
+            if (directorio->d_type == DT_REG) // Comprobar que sea un archivo
+            {
+                switch (directorio->d_name[4])
+                {
+                case '1':
+                    nueva_sucursal = newFile(directorio->d_name, 1); // Añadimos un archivo de la sucursal 1 a la lista
+                    sem_wait(&sem_thread_creation);
+                    pthread_create(&th1, NULL, reader, nueva_sucursal); // Crear hilo 1
+                    sem_post(&sem_thread_creation);
+                    break;
+                case '2':
+                    nueva_sucursal = newFile(directorio->d_name, 2); // Añadimos un archivo de la sucursal 2 a la lista
+                    sem_wait(&sem_thread_creation);
+                    pthread_create(&th2, NULL, reader, nueva_sucursal); // Crear hilo 2
+                    sem_post(&sem_thread_creation);
+                    break;
+                case '3':
+                    nueva_sucursal = newFile(directorio->d_name, 3); // Añadimos un archivo de la sucursal 3 a la lista
+                    sem_wait(&sem_thread_creation);
+                    pthread_create(&th3, NULL, reader, nueva_sucursal); // Crear hilo 3
+                    sem_post(&sem_thread_creation);
+                    break;
+                case '4':
+                    nueva_sucursal = newFile(directorio->d_name, 4); // Añadimos un archivo de la sucursal 4 a la lista
+                    sem_wait(&sem_thread_creation);
+                    pthread_create(&th4, NULL, reader, nueva_sucursal); // Crear hilo 4
+                    sem_post(&sem_thread_creation);
+                    break;
+                default:
+                    break;
+                }
+                pid_patrones = fork();
+                if (pid_patrones) // Este es el proceso padre
+                {
+                printf("PADRE: Soy el proceso padre y mi pid sigue siendo: %d\n", getpid());
+                printf("PADRE: Mi hijo tiene el pid: %d\n", pid_patrones);
+
+                pthread_create(&p1, NULL, patron1, (void *)nueva_sucursal);
+
+                pthread_join(p1, NULL);
+                // Destruir el mutex
+                pthread_mutex_destroy(&mutexPatrones);
+                }
+                else // Proceso hijo
+                {
+                printf("HIJO: Soy el proceso hijo y mi pid es: %d\n", getpid());
+                printf("HIJO: mi padre tiene el pid: %d\n", getppid());
+                }
+
+                strcpy(dataPath, config_file.path_files);
+                strcat(dataPath, "/");
+            }
+        }
+
+        sleep(1);
     }
 
     return 0;
+}
+
+int comprobarDia(const void *a, const void *b){
+    const struct Operacion *registro1 = (const struct Operacion *)a;
+    const struct Operacion *registro2 = (const struct Operacion *)b;
+    return (registro1->FECHA_INICIO, registro2->FECHA_INICIO) ? 0 : 1;
+}
+
+int comparar_registros(const void *a, const void *b) {
+    const struct Operacion *registro1 = (const struct Operacion *)a;
+    const struct Operacion *registro2 = (const struct Operacion *)b;
+    // Primero comparamos por IdUsuario
+    if (registro1->IdUsuario != registro2->IdUsuario) {
+        return registro1->IdUsuario - registro2->IdUsuario;
+    } else {
+        // Si los IdUsuario son iguales, comparamos por FechaIni
+        return strcmp(registro1->FECHA_INICIO, registro2->FECHA_INICIO);
+    }
+}
+// Función para verificar si se superan las 5 operaciones por hora
+int superaLimiteOperaciones(struct Operacion *registros, int inicio, int fin) {
+    int contadorOperaciones = 1;
+    for (int i = inicio + 1; i < fin; i++) {
+        // Calcular la diferencia de tiempo entre operaciones adyacentes
+        struct tm tm1, tm2;
+        strptime(registros[i - 1].FECHA_INICIO, "%d/%m/%Y %H:%M", &tm1);
+        strptime(registros[i].FECHA_INICIO, "%d/%m/%Y %H:%M", &tm2);
+        time_t tiempo1 = mktime(&tm1);
+        time_t tiempo2 = mktime(&tm2);
+        double diferenciaTiempo = difftime(tiempo2, tiempo1);
+
+        // Si la diferencia de tiempo es menor o igual a una hora, incrementar el contador de operaciones
+        if (diferenciaTiempo <= 3600) { // 3600 segundos = 1 hora
+            contadorOperaciones++;
+            // Si el contador supera 5, retornar verdadero
+            if (contadorOperaciones > 5) {
+                return 1;
+            }
+        } else {
+            // Si la diferencia de tiempo es mayor a una hora, reiniciar el contador
+            contadorOperaciones = 1;
+        }
+    }
+    return 0;
+}
+void patron1(void *arg){
+    sucursal_file *ficheroCSV = (char *)arg;
+
+    // Abrir el archivo en modo lectura y escritura
+    FILE *archivo = fopen(ficheroCSV, "r+");
+    if (archivo == NULL) {
+        perror("Error al abrir el archivo");
+        pthread_exit(NULL);
+    }
+
+    // Bloquear el mutex antes de acceder al archivo
+    pthread_mutex_lock(&mutex);
+
+    // Leer los registros del archivo y almacenarlos en una matriz
+    struct Operacion registros[MAX_RECORDS];
+    int num_registros = 0;
+    char linea[MAX_LINE_LENGTH];
+    while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS) {
+        sscanf(linea, "%d;%[^;];%[^;];%d;%d;%d;%f;%s",
+               &registros[num_registros].IdOperacion,
+               registros[num_registros].FECHA_INICIO,
+               registros[num_registros].FECHA_FIN,
+               &registros[num_registros].IdUsuario,
+               &registros[num_registros].IdTipoOperacion,
+               &registros[num_registros].NoOperacion,
+               &registros[num_registros].Importe,
+               registros[num_registros].Estado);
+        num_registros++;
+    }
+
+    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+
+    int i = 0;
+    while (i < num_registros) {
+        int idUsuarioActual = registros[i].IdUsuario;
+        int j = i + 1;
+        while (j < num_registros && registros[j].IdUsuario == idUsuarioActual) {
+            // Verificar si se superan las 5 operaciones por hora
+            if (superaLimiteOperaciones(registros, i, j)) {
+                // Mostrar las operaciones realizadas por el usuario
+                printf("Usuario %d ha realizado más de 5 operaciones en menos de 1 hora:\n", idUsuarioActual);
+                for (int k = i; k < j; k++) {
+                    printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
+                            registros[k].IdOperacion,
+                            registros[k].FECHA_INICIO,
+                            registros[k].FECHA_FIN,
+                            registros[k].IdUsuario,
+                            registros[k].IdTipoOperacion,
+                            registros[k].NoOperacion,
+                            registros[k].Importe,
+                            registros[k].Estado);
+                }
+                break; // Salir del bucle interno
+            }
+            j++;
+        }
+        i = j;
+    }
+    // Mostrar los registros ordenados por pantalla
+    for (int i = 0; i < num_registros; i++) {
+        printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
+                registros[i].IdOperacion,
+                registros[i].FECHA_INICIO,
+                registros[i].FECHA_FIN,
+                registros[i].IdUsuario,
+                registros[i].IdTipoOperacion,
+                registros[i].NoOperacion,
+                registros[i].Importe,
+                registros[i].Estado);
+    }
+
+    // Desbloquear el mutex después de acceder al archivo
+    pthread_mutex_unlock(&mutex);
+
+    // Cerrar el archivo
+    fclose(archivo);
+
+    pthread_exit(NULL);
 }
 
 void readConfigFile(FILE *pf_config)
@@ -174,11 +385,11 @@ void *reader(void *file)
 
 void processFiles(sucursal_file *file)
 {
-    char line[256];                                  // Línea del fichero
-    time_t time_date = time(NULL);                   // Dato de tiempo
-    char control;                                    // Control de lectura
-    char *logString = malloc(600 * sizeof(char));    // Mensaje a escribir en el log
-    char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
+    char line[256];                // Línea del fichero
+    time_t time_date = time(NULL); // Dato de tiempo
+    char control;                  // Control de lectura
+    char logString[600];           // Mensaje a escribir en el log
+    char screenString[600];        // Mensaje a mostrar por pantalla
 
     char dataPath[100];
     char newDataPath[100] = "../processed/";
@@ -190,14 +401,13 @@ void processFiles(sucursal_file *file)
 
     if (sucursal_file == NULL)
     {
-        sprintf(logString, SUCURSAL_ERROR, file->file_name);
-        printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
+        printf("Error al abrir el archivo de la sucursal.\n");
         return;
     }
 
     if (consolidated_file == NULL)
     {
-        printLogScreen(mutexLogFile, config_file.log_file, CONSOLIDADO_OPEN_ERROR, CONSOLIDADO_OPEN_ERROR);
+        printf("Error al abrir el archivo consolidado.\n");
         return;
     }
 
@@ -234,7 +444,6 @@ void processFiles(sucursal_file *file)
 
 void *verifyNewFile()
 {
-    char *logString; // Mensaje a escribir en el log
     int fileDescriptor, watchDescriptor;
     char buffer[BUFFER_LENGTH];
 
@@ -243,7 +452,7 @@ void *verifyNewFile()
 
     if (fileDescriptor < 0)
     { // Se comprueba que se inicialice el descriptor
-        printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
+        printf("Error initializing inotify descriptor");
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
 
@@ -252,7 +461,7 @@ void *verifyNewFile()
 
     if (watchDescriptor < 0)
     { // Se comprueba que se inicialice el watcher
-        printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
+        printf("Error initializing inotify watcher");
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
 
@@ -267,23 +476,23 @@ void *verifyNewFile()
 
         if (length < 0)
         { // Se comprueba que se inicialice correctamente
-            printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
+            printf("Error initializing inotify length");
             exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
         }
 
         // Se procesan los eventos
         while (i < length)
         {
-            char *newNotificationScreen = "\n\n\n"
-                                          "###               ###   ############   ###                           ###\n"
-                                          "### ###           ###   ############    ###                         ###\n"
-                                          "###   ###         ###   ###              ###                       ###\n"
-                                          "###     ###       ###   ############      ###                     ###\n"
-                                          "###       ###     ###   ############       ###        ###        ###\n"
-                                          "###         ###   ###   ###                 ###     ### ###     ###\n"
-                                          "###           ### ###   ############         ### ###       ### ###\n"
-                                          "###               ###   ############          ###            ###\n"
-                                          "\n\n\n";
+            char newNotificationScreen[600] = "\n\n\n"
+                                              "###               ###   ############   ###                           ###\n"
+                                              "### ###           ###   ############    ###                         ###\n"
+                                              "###   ###         ###   ###              ###                       ###\n"
+                                              "###     ###       ###   ############      ###                     ###\n"
+                                              "###       ###     ###   ############       ###        ###        ###\n"
+                                              "###         ###   ###   ###                 ###     ### ###     ###\n"
+                                              "###           ### ###   ############         ### ###       ### ###\n"
+                                              "###               ###   ############          ###            ###\n"
+                                              "\n\n\n";
 
             char newNotificationLog[600];
             struct tm current_time = *localtime(&time_date); // Fecha y hora actual
@@ -303,108 +512,4 @@ void *verifyNewFile()
             i += EVENT_SIZE + event->len; // Se actualiza el tamaño
         }
     }
-}
-
-// --- PROCESS FUNCTIONS ---
-
-int processFilesProcess()
-{
-    sucursal_file *nueva_sucursal;
-
-    // Path a los archivos
-    char dataPath[100];
-    strcpy(dataPath, config_file.path_files);
-    strcat(dataPath, "/");
-    struct dirent *directorio = malloc(sizeof(struct dirent));
-
-    // Strings imprimir
-    char *logString = malloc(600 * sizeof(char));    // Mensaje a mostrar en el log
-    char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
-
-    // Inicializamos las variables de condición y mutex
-    pthread_cond_init(&cond, NULL);
-    pthread_mutex_init(&mutex, NULL);
-    pthread_mutex_init(&mutexLogFile, NULL);
-
-    // Inicializar hilos
-    pthread_t th1, th2, th3, th4;
-
-    // Mostrar path ficheros
-    time_t time_date = time(NULL);                   // Dato de tiempo
-    struct tm current_time = *localtime(&time_date); // Fecha y hora actual
-
-    sprintf(logString, "%d/%d/%d:::%d:%d:%d:::PROCESAMIENTO ARCHIVOS INICIADO:::DIRECTORIO %s", current_time.tm_mday,
-            current_time.tm_mon + 1, current_time.tm_year + 1900,
-            current_time.tm_hour, current_time.tm_min, current_time.tm_sec, config_file.path_files);
-    sprintf(screenString, "Procesamiento de archivos iniciado en el directorio: %s", config_file.path_files);
-    printLogScreen(mutexLogFile, config_file.log_file, logString, screenString);
-
-    // Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
-    pthread_t newFileThread;
-
-    int controler;
-    controler = pthread_create(&newFileThread, NULL, verifyNewFile, NULL);
-
-    if (controler < 0)
-    {
-        printLogScreen(mutexLogFile, config_file.log_file, VERIFIER_THREAD_ERROR, VERIFIER_THREAD_ERROR);
-    }
-
-    // Se inicializa un semáforo para sincronizar el procesado de archivos
-    sem_init(&sem_thread_creation, 0, config_file.num_processes);
-
-    folder = opendir(config_file.path_files);
-
-    if (folder == NULL)
-    {
-        sprintf(logString, FOLDER_OPEN_ERROR, folder);
-        printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
-        return -1;
-    }
-
-    while (1)
-    {
-        while ((directorio = readdir(folder)) != NULL)
-        {
-            if (directorio->d_type == DT_REG) // Comprobar que sea un archivo
-            {
-                switch (directorio->d_name[4])
-                {
-                case '1':
-                    nueva_sucursal = newFile(directorio->d_name, 1); // Añadimos un archivo de la sucursal 1 a la lista
-                    sem_wait(&sem_thread_creation);
-                    pthread_create(&th1, NULL, reader, nueva_sucursal); // Crear hilo 1
-                    sem_post(&sem_thread_creation);
-                    break;
-                case '2':
-                    nueva_sucursal = newFile(directorio->d_name, 2); // Añadimos un archivo de la sucursal 2 a la lista
-                    sem_wait(&sem_thread_creation);
-                    pthread_create(&th2, NULL, reader, nueva_sucursal); // Crear hilo 2
-                    sem_post(&sem_thread_creation);
-                    break;
-                case '3':
-                    nueva_sucursal = newFile(directorio->d_name, 3); // Añadimos un archivo de la sucursal 3 a la lista
-                    sem_wait(&sem_thread_creation);
-                    pthread_create(&th3, NULL, reader, nueva_sucursal); // Crear hilo 3
-                    sem_post(&sem_thread_creation);
-                    break;
-                case '4':
-                    nueva_sucursal = newFile(directorio->d_name, 4); // Añadimos un archivo de la sucursal 4 a la lista
-                    sem_wait(&sem_thread_creation);
-                    pthread_create(&th4, NULL, reader, nueva_sucursal); // Crear hilo 4
-                    sem_post(&sem_thread_creation);
-                    break;
-                default:
-                    break;
-                }
-
-                strcpy(dataPath, config_file.path_files);
-                strcat(dataPath, "/");
-            }
-        }
-
-        sleep(1);
-    }
-
-    return 0;
 }
