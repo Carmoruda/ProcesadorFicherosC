@@ -356,6 +356,10 @@ int processFilesProcess()
     strcat(dataPath, "/");
     struct dirent *directorio = malloc(sizeof(struct dirent));
 
+    // Strings imprimir
+    char *logString = malloc(600 * sizeof(char));    // Mensaje a mostrar en el log
+    char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
+
     // Inicializamos las variables de condición y mutex
     pthread_cond_init(&cond, NULL);
     pthread_mutex_init(&mutex, NULL);
@@ -364,7 +368,15 @@ int processFilesProcess()
     // Inicializar hilos
     pthread_t th1, th2, th3, th4;
 
-    printf("Path files: %s\n", config_file.path_files);
+    // Mostrar path ficheros
+    time_t time_date = time(NULL);                   // Dato de tiempo
+    struct tm current_time = *localtime(&time_date); // Fecha y hora actual
+
+    sprintf(logString, "%d/%d/%d:::%d:%d:%d:::PROCESAMIENTO ARCHIVOS INICIADO:::DIRECTORIO %s", current_time.tm_mday,
+            current_time.tm_mon + 1, current_time.tm_year + 1900,
+            current_time.tm_hour, current_time.tm_min, current_time.tm_sec, config_file.path_files);
+    sprintf(screenString, "Procesamiento de archivos iniciado en el directorio: %s", config_file.path_files);
+    printLogScreen(mutexLogFile, config_file.log_file, logString, screenString);
 
     // Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
     pthread_t newFileThread;
@@ -384,7 +396,6 @@ int processFilesProcess()
 
     if (folder == NULL)
     {
-        char *logString = malloc(600 * sizeof(char));
         sprintf(logString, FOLDER_OPEN_ERROR, folder);
         printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
         return -1;
