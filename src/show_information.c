@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
 
-void printLogScreen(pthread_mutex_t mutexLogFile, char logFile[100], char stringLog[600], char stringScreen[600])
+void printLogScreen(pthread_mutex_t mutexLogFile, char logFile[100], char *stringLog, char *stringScreen)
 {
 
     FILE *log_file = fopen(logFile, "a"); // Archivo de log

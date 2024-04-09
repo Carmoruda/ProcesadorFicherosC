@@ -1,0 +1,8 @@
+#define SUCURSAL_ERROR "Error al abrir el archivo de la sucursal %s.\n"
+#define CONSOLIDADO_OPEN_ERROR "Error al abrir el archivo consolidado.\n"
+#define INOTIFY_DESCRIPTOR_ERROR "Error al inicializar el descriptor inotify.\n"
+#define INOTIFY_WATCHER_ERROR "Error al inicializar el watcher inotify.\n"
+#define INOTIFY_LENGTH_ERROR "Error al obtener el tamaño del evento inotify.\n"
+#define PATTERN_MUTEX_ERROR "Error al inicializar el mutex de los patrones.\n"
+#define FOLDER_OPEN_ERROR "Error al abrir el directorio %s.\n"
+#define VERIFIER_THREAD_ERROR "Error al crear hilo verifier\n"

@@ -8,7 +8,8 @@
 #include <stdbool.h>
 #include <semaphore.h>
 #include <sys/inotify.h>
-#include "show_information.h"
+#include "../include/show_information.h"
+#include "../include/error_messages.h"
 
 #define CONFIG_PATH "./fp.conf"                   // Ruta del archivo de configuración
 #define EVENT_SIZE (sizeof(struct inotify_event)) // Tamaño de los eventos
@@ -187,11 +188,11 @@ void *reader(void *file)
 
 void processFiles(sucursal_file *file)
 {
-    char line[256];                // Línea del fichero
-    time_t time_date = time(NULL); // Dato de tiempo
-    char control;                  // Control de lectura
-    char logString[600];           // Mensaje a escribir en el log
-    char screenString[600];        // Mensaje a mostrar por pantalla
+    char line[256];                                  // Línea del fichero
+    time_t time_date = time(NULL);                   // Dato de tiempo
+    char control;                                    // Control de lectura
+    char *logString = malloc(600 * sizeof(char));    // Mensaje a escribir en el log
+    char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
 
     char dataPath[100];
     char newDataPath[100] = "../processed/";
@@ -203,13 +204,14 @@ void processFiles(sucursal_file *file)
 
     if (sucursal_file == NULL)
     {
-        printf("Error al abrir el archivo de la sucursal.\n");
+        sprintf(logString, SUCURSAL_ERROR, file->file_name);
+        printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
         return;
     }
 
     if (consolidated_file == NULL)
     {
-        printf("Error al abrir el archivo consolidado.\n");
+        printLogScreen(mutexLogFile, config_file.log_file, CONSOLIDADO_OPEN_ERROR, CONSOLIDADO_OPEN_ERROR);
         return;
     }
 
@@ -246,6 +248,7 @@ void processFiles(sucursal_file *file)
 
 void *verifyNewFile()
 {
+    char *logString; // Mensaje a escribir en el log
     int fileDescriptor, watchDescriptor;
     char buffer[BUFFER_LENGTH];
 
@@ -254,7 +257,7 @@ void *verifyNewFile()
 
     if (fileDescriptor < 0)
     { // Se comprueba que se inicialice el descriptor
-        printf("Error initializing inotify descriptor");
+        printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
 
@@ -263,7 +266,7 @@ void *verifyNewFile()
 
     if (watchDescriptor < 0)
     { // Se comprueba que se inicialice el watcher
-        printf("Error initializing inotify watcher");
+        printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
 
@@ -278,23 +281,23 @@ void *verifyNewFile()
 
         if (length < 0)
         { // Se comprueba que se inicialice correctamente
-            printf("Error initializing inotify length");
+            printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
             exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
         }
 
         // Se procesan los eventos
         while (i < length)
         {
-            char newNotificationScreen[600] = "\n\n\n"
-                                              "###               ###   ############   ###                           ###\n"
-                                              "### ###           ###   ############    ###                         ###\n"
-                                              "###   ###         ###   ###              ###                       ###\n"
-                                              "###     ###       ###   ############      ###                     ###\n"
-                                              "###       ###     ###   ############       ###        ###        ###\n"
-                                              "###         ###   ###   ###                 ###     ### ###     ###\n"
-                                              "###           ### ###   ############         ### ###       ### ###\n"
-                                              "###               ###   ############          ###            ###\n"
-                                              "\n\n\n";
+            char *newNotificationScreen = "\n\n\n"
+                                          "###               ###   ############   ###                           ###\n"
+                                          "### ###           ###   ############    ###                         ###\n"
+                                          "###   ###         ###   ###              ###                       ###\n"
+                                          "###     ###       ###   ############      ###                     ###\n"
+                                          "###       ###     ###   ############       ###        ###        ###\n"
+                                          "###         ###   ###   ###                 ###     ### ###     ###\n"
+                                          "###           ### ###   ############         ### ###       ### ###\n"
+                                          "###               ###   ############          ###            ###\n"
+                                          "\n\n\n";
 
             char newNotificationLog[600];
             struct tm current_time = *localtime(&time_date); // Fecha y hora actual
@@ -325,7 +328,7 @@ int checkPatternsProcess()
     // Inicializar el mutex
     if (pthread_mutex_init(&mutexPatterns, NULL) != 0)
     {
-        printf("Error al inicializar el mutex de los patrones\n");
+        printLogScreen(mutexLogFile, config_file.log_file, PATTERN_MUTEX_ERROR, PATTERN_MUTEX_ERROR);
         return -1;
     }
 
@@ -371,7 +374,7 @@ int processFilesProcess()
 
     if (controler < 0)
     {
-        printf("Error al crear hilo verifier");
+        printLogScreen(mutexLogFile, config_file.log_file, VERIFIER_THREAD_ERROR, VERIFIER_THREAD_ERROR);
     }
 
     // Se inicializa un semáforo para sincronizar el procesado de archivos
@@ -381,7 +384,9 @@ int processFilesProcess()
 
     if (folder == NULL)
     {
-        printf("Error al abrir el directorio.");
+        char *logString = malloc(600 * sizeof(char));
+        sprintf(logString, FOLDER_OPEN_ERROR, folder);
+        printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
         return -1;
     }
 
@@ -436,140 +441,8 @@ int processFilesProcess()
 
 void *pattern1()
 {
-    char *nombreArchivo = config_file.inventory_file;
-
-    // Abrir el archivo en modo lectura y escritura
-    FILE *archivo = fopen(nombreArchivo, "r+");
-    if (archivo == NULL)
-    {
-        perror("Error al abrir el archivo");
-        pthread_exit(NULL);
-    }
-
-    // Bloquear el mutex antes de acceder al archivo
-    pthread_mutex_lock(&mutexPatterns);
-
-    // Leer los registros del archivo y almacenarlos en una matriz
-    struct Operacion registros[MAX_RECORDS];
-    int num_registros = 0;
-    char linea[MAX_LINE_LENGTH];
-    while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS)
-    {
-        sscanf(linea, "%d;%[^;];%[^;];%d;%d;%d;%f;%s",
-               &registros[num_registros].IdOperacion,
-               registros[num_registros].FECHA_INICIO,
-               registros[num_registros].FECHA_FIN,
-               &registros[num_registros].IdUsuario,
-               &registros[num_registros].IdTipoOperacion,
-               &registros[num_registros].NoOperacion,
-               &registros[num_registros].Importe,
-               registros[num_registros].Estado);
-        num_registros++;
-    }
-
-    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
-
-    int i = 0;
-    while (i < num_registros)
-    {
-        int idUsuarioActual = registros[i].IdUsuario;
-        int j = i + 1;
-        while (j < num_registros && registros[j].IdUsuario == idUsuarioActual)
-        {
-            // Verificar si se superan las 5 operaciones por hora
-            if (superaLimiteOperaciones(registros, i, j))
-            {
-                // Mostrar las operaciones realizadas por el usuario
-                printf("Usuario %d ha realizado más de 5 operaciones en menos de 1 hora:\n", idUsuarioActual);
-                for (int k = i; k < j; k++)
-                {
-                    printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                           registros[k].IdOperacion,
-                           registros[k].FECHA_INICIO,
-                           registros[k].FECHA_FIN,
-                           registros[k].IdUsuario,
-                           registros[k].IdTipoOperacion,
-                           registros[k].NoOperacion,
-                           registros[k].Importe,
-                           registros[k].Estado);
-                }
-                break; // Salir del bucle interno
-            }
-            j++;
-        }
-        i = j;
-    }
-    // Mostrar los registros ordenados por pantalla
-    for (int i = 0; i < num_registros; i++)
-    {
-        printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-               registros[i].IdOperacion,
-               registros[i].FECHA_INICIO,
-               registros[i].FECHA_FIN,
-               registros[i].IdUsuario,
-               registros[i].IdTipoOperacion,
-               registros[i].NoOperacion,
-               registros[i].Importe,
-               registros[i].Estado);
-    }
-
-    // Desbloquear el mutex después de acceder al archivo
-    pthread_mutex_unlock(&mutexPatterns);
-
-    // Cerrar el archivo
-    fclose(archivo);
-
-    pthread_exit(NULL);
+    // Lógica de comprobación de patrón 1
 }
-
-int comparar_registros(const void *a, const void *b)
-{
-    const struct Operacion *registro1 = (const struct Operacion *)a;
-    const struct Operacion *registro2 = (const struct Operacion *)b;
-    // Primero comparamos por IdUsuario
-    if (registro1->IdUsuario != registro2->IdUsuario)
-    {
-        return registro1->IdUsuario - registro2->IdUsuario;
-    }
-    else
-    {
-        // Si los IdUsuario son iguales, comparamos por FechaIni
-        return strcmp(registro1->FECHA_INICIO, registro2->FECHA_INICIO);
-    }
-}
-
-// Función para verificar si se superan las 5 operaciones por hora
-int superaLimiteOperaciones(struct Operacion *registros, int inicio, int fin)
-{
-    int contadorOperaciones = 1;
-    for (int i = inicio + 1; i < fin; i++)
-    {
-        // Calcular la diferencia de tiempo entre operaciones adyacentes
-        struct tm tm1, tm2;
-        strptime(registros[i - 1].FECHA_INICIO, "%d/%m/%Y %H:%M", &tm1);
-        strptime(registros[i].FECHA_INICIO, "%d/%m/%Y %H:%M", &tm2);
-        time_t tiempo1 = mktime(&tm1);
-        time_t tiempo2 = mktime(&tm2);
-        double diferenciaTiempo = difftime(tiempo2, tiempo1);
-
-        // Si la diferencia de tiempo es menor o igual a una hora, incrementar el contador de operaciones
-        if (diferenciaTiempo <= 3600)
-        { // 3600 segundos = 1 hora
-            contadorOperaciones++;
-            // Si el contador supera 5, retornar verdadero
-            if (contadorOperaciones > 5)
-            {
-                return 1;
-            }
-        }
-        else
-        {
-            // Si la diferencia de tiempo es mayor a una hora, reiniciar el contador
-            contadorOperaciones = 1;
-        }
-    }
-}
-
 /// --- Pattern 2 ---
 
 void *pattern2()
