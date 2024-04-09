@@ -11,6 +11,7 @@
         "stdio.h": "c",
         "dirent.h": "c",
         "show_information.h": "c",
-        "common_structures.h": "c"
+        "common_structures.h": "c",
+        "pthread.h": "c"
     }
 }
