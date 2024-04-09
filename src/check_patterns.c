@@ -155,9 +155,5 @@ int enLaMismaHora(char* fecha1, char* fecha2)
     unsigned long long int minutos = diferencia / 60;
     diferencia -= 60 * minutos;
 
-    if(diferencia <= 3600){
-      return 1;
-    }else{
-      return 0;
-    }
+    return diferencia <= 3600 ? 1 : 0;
 }
