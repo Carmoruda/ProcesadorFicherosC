@@ -12,6 +12,11 @@
         "dirent.h": "c",
         "show_information.h": "c",
         "common_structures.h": "c",
-        "pthread.h": "c"
+        "pthread.h": "c",
+        "time.h": "c",
+        "error_messages.h": "c",
+        "check_patterns.h": "c",
+        "semaphore.h": "c",
+        "common_components.h": "c"
     }
 }

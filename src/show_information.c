@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <pthread.h>
+#include "../include/show_information.h"
 
 void printLogScreen(pthread_mutex_t mutexLogFile, char logFile[100], char *stringLog, char *stringScreen)
 {

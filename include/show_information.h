@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <pthread.h>
+
 /// @brief Mostrar por pantalla y escribir en el archivo de log
 /// @param mutexLogFile Mutex para el archivo de log
 /// @param logFile Nombre del archivo de log
