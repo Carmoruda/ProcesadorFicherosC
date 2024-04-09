@@ -1,7 +1,9 @@
 #include "../include/check_patterns.h"
+#include "../include/program_data.h"
 
 pthread_mutex_t mutexPatterns; // Mutex para el control de patrones
 pthread_mutex_t mutexLog;      // Mutex para el acceso al log
+pthread_mutex_t mutexPatterns;
 
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
@@ -61,8 +63,15 @@ void *pattern5()
 {
     // Lógica de comprobación de patrón 5
 }
-/*
-void readConsolidatedFile(){
+
+int comparar_registros(const void *a, const void *b) {
+    const struct Operacion *registro1 = (const struct Operacion *)a;
+    const struct Operacion *registro2 = (const struct Operacion *)b;
+    // Primero comparamos por IdUsuario
+    return registro1->IdUsuario != registro2->IdUsuario ? registro1->IdUsuario - registro2->IdUsuario : strcmp(registro1->FECHA_INICIO, registro2->FECHA_INICIO);
+}
+
+void readConsolidatedFile(void *arg){
     sucursal_file *ficheroCSV = (char *)arg;
 
     // Abrir el archivo en modo lectura y escritura
@@ -72,8 +81,6 @@ void readConsolidatedFile(){
         pthread_exit(NULL);
     }
 
-    // Bloquear el mutex antes de acceder al archivo
-    pthread_mutex_lock(&mutex);
 
     // Leer los registros del archivo y almacenarlos en una matriz
     struct Operacion registros[MAX_RECORDS];
@@ -91,7 +98,6 @@ void readConsolidatedFile(){
                registros[num_registros].Estado);
         num_registros++;
     }
-
+    fclose(ficheroCSV);
     qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
 }
-*/
