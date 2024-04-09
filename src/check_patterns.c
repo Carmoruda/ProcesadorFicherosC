@@ -5,6 +5,8 @@ pthread_mutex_t mutexPatterns; // Mutex para el control de patrones
 pthread_mutex_t mutexLog;      // Mutex para el acceso al log
 pthread_mutex_t mutexPatterns;
 
+struct Operacion registros[MAX_RECORDS];
+
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
     mutexLog = mutexLogFile;
@@ -33,9 +35,50 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
 // --- Pattern 1 ---
 
-void *pattern1()
+void *pattern1(void *arg)
 {
-    // Lógica de comprobación de patrón 1
+    pthread_mutex_lock(&mutexPatterns);
+    int num_registros = readConsolidatedFile(&arg, registros);
+
+    int contadorOperaciones = 0;
+    int ultimoUsuario = -1;
+    long ultimoTiempo = 0;
+
+    for (int i = 0; i < num_registros; i++) {
+        // Verificar si es la misma persona y si la operación está dentro del rango de una hora
+        if (registros[i].IdUsuario == ultimoUsuario && enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1) {
+            contadorOperaciones++;
+            // Si el usuario realiza 5 o más operaciones dentro de una hora, hacer algo
+            if (contadorOperaciones >= 5) {
+                // Aquí puedes imprimir un mensaje, tomar alguna acción, etc.
+                printf("Usuario %d realizó 5 o más operaciones dentro de una hora.\n", registros[i].IdUsuario);
+            }
+        } else {
+            // Reiniciar el contador de operaciones para un nuevo usuario o una nueva hora
+            contadorOperaciones = 1;
+        }
+
+        // Actualizar el usuario y el tiempo para la próxima iteración
+        ultimoUsuario = registros[i].IdUsuario;
+        ultimoTiempo = registros[i].FECHA_INICIO;
+    }
+    // Mostrar los registros ordenados por pantalla
+    for (int i = 0; i < num_registros; i++) {
+        printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
+                registros[i].IdOperacion,
+                registros[i].FECHA_INICIO,
+                registros[i].FECHA_FIN,
+                registros[i].IdUsuario,
+                registros[i].IdTipoOperacion,
+                registros[i].NoOperacion,
+                registros[i].Importe,
+                registros[i].Estado);
+    }
+
+    // Desbloquear el mutex después de acceder al archivo
+    pthread_mutex_unlock(&mutexPatterns);
+
+    pthread_exit(NULL);
 }
 
 /// --- Pattern 2 ---
@@ -71,7 +114,7 @@ int comparar_registros(const void *a, const void *b) {
     return registro1->IdUsuario != registro2->IdUsuario ? registro1->IdUsuario - registro2->IdUsuario : strcmp(registro1->FECHA_INICIO, registro2->FECHA_INICIO);
 }
 
-void readConsolidatedFile(void *arg){
+int readConsolidatedFile(void *arg, struct Operacion registros[MAX_RECORDS]){
     sucursal_file *ficheroCSV = (char *)arg;
 
     // Abrir el archivo en modo lectura y escritura
@@ -83,7 +126,6 @@ void readConsolidatedFile(void *arg){
 
 
     // Leer los registros del archivo y almacenarlos en una matriz
-    struct Operacion registros[MAX_RECORDS];
     int num_registros = 0;
     char linea[MAX_LINE_LENGTH];
     while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS) {
@@ -100,4 +142,22 @@ void readConsolidatedFile(void *arg){
     }
     fclose(ficheroCSV);
     qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    return num_registros;
+}
+
+int enLaMismaHora(char* fecha1, char* fecha2)
+{
+    time_t f1,f2,diferencia;
+    f1 = fecha1;
+    f2 = fecha2;
+    unsigned long long int horas = diferencia / 60 / 60;
+    diferencia -= 60 * 60 * horas;
+    unsigned long long int minutos = diferencia / 60;
+    diferencia -= 60 * minutos;
+
+    if(diferencia <= 3600){
+      return 1;
+    }else{
+      return 0;
+    }
 }
