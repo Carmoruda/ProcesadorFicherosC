@@ -22,6 +22,17 @@ typedef struct sucursal_file
     int num_operations;  // Número de operaciones realizadas
 } sucursal_file;
 
+struct Operacion {
+    int IdOperacion;
+    char FECHA_INICIO[20];
+    char FECHA_FIN[20];
+    int IdUsuario;
+    int IdTipoOperacion;
+    int NoOperacion;
+    float Importe;
+    char Estado[20];
+};
+
 void *pattern1();
 void *pattern2();
 void *pattern3();

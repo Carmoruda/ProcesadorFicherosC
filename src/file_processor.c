@@ -11,7 +11,6 @@
 #include "../include/program_data.h"
 
 
-
 pthread_cond_t cond;          // Variable de condición de los hilos
 pthread_mutex_t mutex;        // Mutex para la exclusión mutua
 pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
@@ -191,23 +190,7 @@ int main()
     return 0;
 }
 
-int comprobarDia(const void *a, const void *b){
-    const struct Operacion *registro1 = (const struct Operacion *)a;
-    const struct Operacion *registro2 = (const struct Operacion *)b;
-    return (registro1->FECHA_INICIO, registro2->FECHA_INICIO) ? 0 : 1;
-}
 
-int comparar_registros(const void *a, const void *b) {
-    const struct Operacion *registro1 = (const struct Operacion *)a;
-    const struct Operacion *registro2 = (const struct Operacion *)b;
-    // Primero comparamos por IdUsuario
-    if (registro1->IdUsuario != registro2->IdUsuario) {
-        return registro1->IdUsuario - registro2->IdUsuario;
-    } else {
-        // Si los IdUsuario son iguales, comparamos por FechaIni
-        return strcmp(registro1->FECHA_INICIO, registro2->FECHA_INICIO);
-    }
-}
 // Función para verificar si se superan las 5 operaciones por hora
 int superaLimiteOperaciones(struct Operacion *registros, int inicio, int fin) {
     int contadorOperaciones = 1;
@@ -264,7 +247,6 @@ void patron1(void *arg){
         num_registros++;
     }
 
-    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
 
     int i = 0;
     while (i < num_registros) {
