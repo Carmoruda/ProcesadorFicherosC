@@ -164,19 +164,19 @@ int main()
                 pid_patrones = fork();
                 if (pid_patrones) // Este es el proceso padre
                 {
-                printf("PADRE: Soy el proceso padre y mi pid sigue siendo: %d\n", getpid());
-                printf("PADRE: Mi hijo tiene el pid: %d\n", pid_patrones);
+                    printf("PADRE: Soy el proceso padre y mi pid sigue siendo: %d\n", getpid());
+                    printf("PADRE: Mi hijo tiene el pid: %d\n", pid_patrones);
 
-                pthread_create(&p1, NULL, patron1, (void *)nueva_sucursal);
+                    pthread_create(&p1, NULL, patron1, (void *)nueva_sucursal);
 
-                pthread_join(p1, NULL);
-                // Destruir el mutex
-                pthread_mutex_destroy(&mutexPatrones);
+                    pthread_join(p1, NULL);
+                    // Destruir el mutex
+                    pthread_mutex_destroy(&mutexPatrones);
                 }
                 else // Proceso hijo
                 {
-                printf("HIJO: Soy el proceso hijo y mi pid es: %d\n", getpid());
-                printf("HIJO: mi padre tiene el pid: %d\n", getppid());
+                    printf("HIJO: Soy el proceso hijo y mi pid es: %d\n", getpid());
+                    printf("HIJO: mi padre tiene el pid: %d\n", getppid());
                 }
 
                 strcpy(dataPath, config_file.path_files);
@@ -217,7 +217,7 @@ int superaLimiteOperaciones(struct Operacion *registros, int inicio, int fin) {
     }
     return 0;
 }
-void patron1(void *arg){
+void patron1(void *arg) {
     sucursal_file *ficheroCSV = (char *)arg;
 
     // Abrir el archivo en modo lectura y escritura
@@ -259,14 +259,14 @@ void patron1(void *arg){
                 printf("Usuario %d ha realizado más de 5 operaciones en menos de 1 hora:\n", idUsuarioActual);
                 for (int k = i; k < j; k++) {
                     printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                            registros[k].IdOperacion,
-                            registros[k].FECHA_INICIO,
-                            registros[k].FECHA_FIN,
-                            registros[k].IdUsuario,
-                            registros[k].IdTipoOperacion,
-                            registros[k].NoOperacion,
-                            registros[k].Importe,
-                            registros[k].Estado);
+                           registros[k].IdOperacion,
+                           registros[k].FECHA_INICIO,
+                           registros[k].FECHA_FIN,
+                           registros[k].IdUsuario,
+                           registros[k].IdTipoOperacion,
+                           registros[k].NoOperacion,
+                           registros[k].Importe,
+                           registros[k].Estado);
                 }
                 break; // Salir del bucle interno
             }
@@ -277,14 +277,14 @@ void patron1(void *arg){
     // Mostrar los registros ordenados por pantalla
     for (int i = 0; i < num_registros; i++) {
         printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                registros[i].IdOperacion,
-                registros[i].FECHA_INICIO,
-                registros[i].FECHA_FIN,
-                registros[i].IdUsuario,
-                registros[i].IdTipoOperacion,
-                registros[i].NoOperacion,
-                registros[i].Importe,
-                registros[i].Estado);
+               registros[i].IdOperacion,
+               registros[i].FECHA_INICIO,
+               registros[i].FECHA_FIN,
+               registros[i].IdUsuario,
+               registros[i].IdTipoOperacion,
+               registros[i].NoOperacion,
+               registros[i].Importe,
+               registros[i].Estado);
     }
 
     // Desbloquear el mutex después de acceder al archivo
@@ -433,7 +433,7 @@ void *verifyNewFile()
     fileDescriptor = inotify_init();
 
     if (fileDescriptor < 0)
-    { // Se comprueba que se inicialice el descriptor
+    {   // Se comprueba que se inicialice el descriptor
         printf("Error initializing inotify descriptor");
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -442,7 +442,7 @@ void *verifyNewFile()
     watchDescriptor = inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
 
     if (watchDescriptor < 0)
-    { // Se comprueba que se inicialice el watcher
+    {   // Se comprueba que se inicialice el watcher
         printf("Error initializing inotify watcher");
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -457,7 +457,7 @@ void *verifyNewFile()
         length = read(fileDescriptor, buffer, BUFFER_LENGTH);
 
         if (length < 0)
-        { // Se comprueba que se inicialice correctamente
+        {   // Se comprueba que se inicialice correctamente
             printf("Error initializing inotify length");
             exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
         }

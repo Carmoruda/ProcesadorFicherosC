@@ -71,7 +71,7 @@ int comparar_registros(const void *a, const void *b) {
     return registro1->IdUsuario != registro2->IdUsuario ? registro1->IdUsuario - registro2->IdUsuario : strcmp(registro1->FECHA_INICIO, registro2->FECHA_INICIO);
 }
 
-void readConsolidatedFile(void *arg){
+void readConsolidatedFile(void *arg) {
     sucursal_file *ficheroCSV = (char *)arg;
 
     // Abrir el archivo en modo lectura y escritura
