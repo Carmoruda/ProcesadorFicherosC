@@ -14,23 +14,16 @@
 /// @return 0 si todo ha ido bien, -1 si ha habido un error
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file);
 
-/// @brief Estructura que contiene la información de los archivos de las sucursales
-typedef struct sucursal_file
-{
-    char file_name[100]; // Nombre del fichero
-    int sucursal_number; // Número de la sucursal
-    int num_operations;  // Número de operaciones realizadas
-} sucursal_file;
-
 struct Operacion {
-    int IdOperacion;
+    char IdOperacion[20];
     char FECHA_INICIO[20];
     char FECHA_FIN[20];
-    int IdUsuario;
-    int IdTipoOperacion;
+    char IdUsuario[20];
+    char IdTipoOperacion[20];
     int NoOperacion;
     float Importe;
     char Estado[20];
+    int Sucursal;
 };
 
 void *pattern1();
