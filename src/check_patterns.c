@@ -117,15 +117,15 @@ void *pattern1()
     for (int i = 0; i < num_registros; i++)
     {
         printf("Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                            registros[i].Sucursal,
-                            registros[i].IdOperacion,
-                            registros[i].FECHA_INICIO,
-                            registros[i].FECHA_FIN,
-                            registros[i].IdUsuario,
-                            registros[i].IdTipoOperacion,
-                            registros[i].NoOperacion,
-                            registros[i].Importe,
-                            registros[i].Estado);
+               registros[i].Sucursal,
+               registros[i].IdOperacion,
+               registros[i].FECHA_INICIO,
+               registros[i].FECHA_FIN,
+               registros[i].IdUsuario,
+               registros[i].IdTipoOperacion,
+               registros[i].NoOperacion,
+               registros[i].Importe,
+               registros[i].Estado);
 
     }
 
