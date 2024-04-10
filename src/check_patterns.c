@@ -1,11 +1,23 @@
 #include "../include/check_patterns.h"
 #include "../include/program_data.h"
-
+#include <stdio.h>
 pthread_mutex_t mutexPatterns; // Mutex para el control de patrones
 pthread_mutex_t mutexLog;      // Mutex para el acceso al log
 pthread_mutex_t mutexPatterns;
 
-struct Operacion registros[MAX_RECORDS];
+/// @brief Compara dos operaciones para la funcion qsort, que ordena el fichero csv en orden de usuario.
+/// @param a Primera operación.
+/// @param b Segunda operación.
+/// @return Devuelve un 1 si las usuarios coinciden, y un 0 en caso contrario.
+int comparar_registros(const void *a, const void *b);
+
+/// @brief Compara dos fechas de inicio de dos operaciones para verificar si se cumple la condicion del patron1.
+/// @param fecha1 Primera fecha
+/// @param fecha2 Segunda fecha.
+/// @return Devuelve un 1 si las fechas estan en la misma hora, y un 0 en caso contrario.
+int enLaMismaHora(char *fecha1, char *fecha2);
+
+
 
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
@@ -35,44 +47,86 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
 // --- Pattern 1 ---
 
-void *pattern1(void *arg)
+void *pattern1()
 {
+    printf("HOLA");
+    char *ficheroCSV = "../output/fich_consolidado.csv";
+
+    // Abrir el archivo en modo lectura y escritura
+    FILE *archivo = fopen(ficheroCSV, "r+");
+    if (archivo == NULL)
+    {
+        perror("Error al abrir el archivo");
+        pthread_exit(NULL);
+    }
+
+    // Bloquear el mutex antes de acceder al archivo
     pthread_mutex_lock(&mutexPatterns);
-    int num_registros = readConsolidatedFile(&arg, registros);
+
+    // Leer los registros del archivo y almacenarlos en una matriz
+    struct Operacion registros[MAX_RECORDS];
+    int num_registros = 0;
+    char linea[MAX_LINE_LENGTH];
+    while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS)
+    {
+        sscanf(linea, "%d;%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;]",
+               &registros[num_registros].Sucursal,
+               registros[num_registros].IdOperacion,
+               registros[num_registros].FECHA_INICIO,
+               registros[num_registros].FECHA_FIN,
+               registros[num_registros].IdUsuario,
+               registros[num_registros].IdTipoOperacion,
+               &registros[num_registros].NoOperacion,
+               &registros[num_registros].Importe,
+               registros[num_registros].Estado);
+        num_registros++;
+
+    }
+    // Cerrar el archivo
+    fclose(archivo);
+    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
 
     int contadorOperaciones = 0;
-    int ultimoUsuario = -1;
-    long ultimoTiempo = 0;
+    char* ultimoUsuario;
+    char* ultimoTiempo;
 
-    for (int i = 0; i < num_registros; i++) {
+    for (int i = 0; i < num_registros; i++)
+    {
         // Verificar si es la misma persona y si la operación está dentro del rango de una hora
-        if (registros[i].IdUsuario == ultimoUsuario && enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1) {
+        if (strcmp(registros[i].IdUsuario,ultimoUsuario) && enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1)
+        {
             contadorOperaciones++;
             // Si el usuario realiza 5 o más operaciones dentro de una hora, hacer algo
-            if (contadorOperaciones >= 5) {
+            if (contadorOperaciones >= 5)
+            {
                 // Aquí puedes imprimir un mensaje, tomar alguna acción, etc.
                 printf("Usuario %d realizó 5 o más operaciones dentro de una hora.\n", registros[i].IdUsuario);
             }
-        } else {
+        }
+        else
+        {
             // Reiniciar el contador de operaciones para un nuevo usuario o una nueva hora
             contadorOperaciones = 1;
         }
 
         // Actualizar el usuario y el tiempo para la próxima iteración
-        ultimoUsuario = registros[i].IdUsuario;
-        ultimoTiempo = registros[i].FECHA_INICIO;
+        strcpy(ultimoUsuario, registros[i].IdUsuario);
+        strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
     // Mostrar los registros ordenados por pantalla
-    for (int i = 0; i < num_registros; i++) {
-        printf("IdOperacion: %d, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %d, IdTipoOperacion: %d, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                registros[i].IdOperacion,
-                registros[i].FECHA_INICIO,
-                registros[i].FECHA_FIN,
-                registros[i].IdUsuario,
-                registros[i].IdTipoOperacion,
-                registros[i].NoOperacion,
-                registros[i].Importe,
-                registros[i].Estado);
+    for (int i = 0; i < num_registros; i++)
+    {
+        printf("Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
+                            registros[i].Sucursal,
+                            registros[i].IdOperacion,
+                            registros[i].FECHA_INICIO,
+                            registros[i].FECHA_FIN,
+                            registros[i].IdUsuario,
+                            registros[i].IdTipoOperacion,
+                            registros[i].NoOperacion,
+                            registros[i].Importe,
+                            registros[i].Estado);
+
     }
 
     // Desbloquear el mutex después de acceder al archivo
@@ -107,53 +161,32 @@ void *pattern5()
     // Lógica de comprobación de patrón 5
 }
 
-int comparar_registros(const void *a, const void *b) {
+// Función de apoyo a la función de qsort, para ordenar por usuarios.
+int comparar_registros(const void *a, const void *b)
+{
     const struct Operacion *registro1 = (const struct Operacion *)a;
     const struct Operacion *registro2 = (const struct Operacion *)b;
-    // Primero comparamos por IdUsuario
-    return registro1->IdUsuario != registro2->IdUsuario ? registro1->IdUsuario - registro2->IdUsuario : strcmp(registro1->FECHA_INICIO, registro2->FECHA_INICIO);
+
+    return strcmp(registro1->IdUsuario, registro2->IdUsuario);
 }
 
-int readConsolidatedFile(void *arg, struct Operacion registros[MAX_RECORDS]){
-    sucursal_file *ficheroCSV = (char *)arg;
-
-    // Abrir el archivo en modo lectura y escritura
-    FILE *archivo = fopen(ficheroCSV, "r+");
-    if (archivo == NULL) {
-        perror("Error al abrir el archivo");
-        pthread_exit(NULL);
-    }
-
-
-    // Leer los registros del archivo y almacenarlos en una matriz
-    int num_registros = 0;
-    char linea[MAX_LINE_LENGTH];
-    while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS) {
-        sscanf(linea, "%d;%[^;];%[^;];%d;%d;%d;%f;%s",
-               &registros[num_registros].IdOperacion,
-               registros[num_registros].FECHA_INICIO,
-               registros[num_registros].FECHA_FIN,
-               &registros[num_registros].IdUsuario,
-               &registros[num_registros].IdTipoOperacion,
-               &registros[num_registros].NoOperacion,
-               &registros[num_registros].Importe,
-               registros[num_registros].Estado);
-        num_registros++;
-    }
-    fclose(ficheroCSV);
-    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
-    return num_registros;
-}
-
-int enLaMismaHora(char* fecha1, char* fecha2)
+// Función para verificar si se superan las 5 operaciones por hora
+int enLaMismaHora(char *fecha1, char *fecha2)
 {
-    time_t f1,f2,diferencia;
-    f1 = fecha1;
-    f2 = fecha2;
+    time_t f1, f2, diferencia;
+    f1 = (long)fecha1;
+    f2 = (long)fecha2;
     unsigned long long int horas = diferencia / 60 / 60;
     diferencia -= 60 * 60 * horas;
     unsigned long long int minutos = diferencia / 60;
     diferencia -= 60 * minutos;
 
-    return diferencia <= 3600 ? 1 : 0;
+    if (diferencia <= 3600)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
