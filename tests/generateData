@@ -47,7 +47,7 @@ fi
 
 fecha=$(generateDate)
 
-fileNumber=$((RANDOM % 100))
+fileNumber=$((RANDOM % 300000 + 1))
 
 filename="${sucursal_number}_${type_operation}_${fecha}_${fileNumber}.data"
 
