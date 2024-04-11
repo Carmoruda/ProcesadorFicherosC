@@ -5,6 +5,8 @@ pthread_mutex_t mutexPatterns; // Mutex para el control de patrones
 pthread_mutex_t mutexLog;      // Mutex para el acceso al log
 pthread_mutex_t mutexPatterns;
 
+struct Operacion registros[MAX_RECORDS];
+
 /// @brief Compara dos operaciones para la funcion qsort, que ordena el fichero csv en orden de usuario.
 /// @param a Primera operación.
 /// @param b Segunda operación.
@@ -16,6 +18,9 @@ int comparar_registros(const void *a, const void *b);
 /// @param fecha2 Segunda fecha.
 /// @return Devuelve un 1 si las fechas estan en la misma hora, y un 0 en caso contrario.
 int enLaMismaHora(char *fecha1, char *fecha2);
+///@brief Lee el fichero consolidado y lo almacena en array de registros
+///@return Número de registos
+int leerFicheroConsolidado();
 
 
 
@@ -30,65 +35,34 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
         printLogScreen(mutexLog, log_file, PATTERN_MUTEX_ERROR, PATTERN_MUTEX_ERROR);
         return -1;
     }
-
+     
     while (1)
     {
-        th_pattern1 = pthread_create(&th_pattern1, NULL, pattern1, NULL);
-        th_pattern2 = pthread_create(&th_pattern2, NULL, pattern2, NULL);
-        th_pattern3 = pthread_create(&th_pattern3, NULL, pattern3, NULL);
-        th_pattern4 = pthread_create(&th_pattern4, NULL, pattern4, NULL);
-        th_pattern5 = pthread_create(&th_pattern5, NULL, pattern5, NULL);
+        pthread_create(&th_pattern1, NULL, pattern1, NULL);
+        pthread_create(&th_pattern2, NULL, pattern2, NULL);
+        pthread_create(&th_pattern3, NULL, pattern3, NULL);
+        pthread_create(&th_pattern4, NULL, pattern4, NULL);
+        pthread_create(&th_pattern5, NULL, pattern5, NULL);
 
-        sleep(10);
     }
 
+        pthread_join(th_pattern1, NULL);
+        pthread_join(th_pattern2, NULL);
+        pthread_join(th_pattern3, NULL);
+        pthread_join(th_pattern4, NULL);
+        pthread_join(th_pattern5, NULL);
     return 0;
 }
 
 // --- Pattern 1 ---
 
-void *pattern1()
+void *pattern1(void *arg)
 {
-    printf("HOLA");
-    char *ficheroCSV = "../output/fich_consolidado.csv";
-
-    // Abrir el archivo en modo lectura y escritura
-    FILE *archivo = fopen(ficheroCSV, "r+");
-    if (archivo == NULL)
-    {
-        perror("Error al abrir el archivo");
-        pthread_exit(NULL);
-    }
-
-    // Bloquear el mutex antes de acceder al archivo
-    pthread_mutex_lock(&mutexPatterns);
-
-    // Leer los registros del archivo y almacenarlos en una matriz
-    struct Operacion registros[MAX_RECORDS];
-    int num_registros = 0;
-    char linea[MAX_LINE_LENGTH];
-    while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS)
-    {
-        sscanf(linea, "%d;%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;]",
-               &registros[num_registros].Sucursal,
-               registros[num_registros].IdOperacion,
-               registros[num_registros].FECHA_INICIO,
-               registros[num_registros].FECHA_FIN,
-               registros[num_registros].IdUsuario,
-               registros[num_registros].IdTipoOperacion,
-               &registros[num_registros].NoOperacion,
-               &registros[num_registros].Importe,
-               registros[num_registros].Estado);
-        num_registros++;
-
-    }
-    // Cerrar el archivo
-    fclose(archivo);
-    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    int num_registros = leerFicheroConsolidado();
 
     int contadorOperaciones = 0;
-    char* ultimoUsuario;
-    char* ultimoTiempo;
+    char ultimoUsuario[100];
+    char ultimoTiempo[100];
 
     for (int i = 0; i < num_registros; i++)
     {
@@ -113,6 +87,7 @@ void *pattern1()
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
+    
     // Mostrar los registros ordenados por pantalla
     for (int i = 0; i < num_registros; i++)
     {
@@ -131,7 +106,6 @@ void *pattern1()
 
     // Desbloquear el mutex después de acceder al archivo
     pthread_mutex_unlock(&mutexPatterns);
-
     pthread_exit(NULL);
 }
 
@@ -161,6 +135,43 @@ void *pattern5()
     // Lógica de comprobación de patrón 5
 }
 
+int leerFicheroConsolidado(){
+    char *ficheroCSV = "../output/fich_consolidado.csv";
+
+    // Abrir el archivo en modo lectura y escritura
+    FILE *archivo = fopen(ficheroCSV, "r+");
+    if (archivo == NULL)
+    {
+        perror("Error al abrir el archivo");
+        pthread_exit(NULL);
+    }
+
+    // Bloquear el mutex antes de acceder al archivo
+    pthread_mutex_lock(&mutexPatterns);
+
+    int num_registros = 0;
+    char linea[MAX_LINE_LENGTH];
+    while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS)
+    {
+        sscanf(linea, "%d;%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;]",
+               &registros[num_registros].Sucursal,
+               registros[num_registros].IdOperacion,
+               registros[num_registros].FECHA_INICIO,
+               registros[num_registros].FECHA_FIN,
+               registros[num_registros].IdUsuario,
+               registros[num_registros].IdTipoOperacion,
+               &registros[num_registros].NoOperacion,
+               &registros[num_registros].Importe,
+               registros[num_registros].Estado);
+        num_registros++;
+
+    }
+    // Cerrar el archivo
+    fclose(archivo);
+    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    return num_registros;
+}
+
 // Función de apoyo a la función de qsort, para ordenar por usuarios.
 int comparar_registros(const void *a, const void *b)
 {
@@ -180,13 +191,5 @@ int enLaMismaHora(char *fecha1, char *fecha2)
     diferencia -= 60 * 60 * horas;
     unsigned long long int minutos = diferencia / 60;
     diferencia -= 60 * minutos;
-
-    if (diferencia <= 3600)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
+    return diferencia <= 3600 ? 1 : 0;
 }

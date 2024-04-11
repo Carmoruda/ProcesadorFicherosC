@@ -26,7 +26,7 @@ struct Operacion {
     int Sucursal;
 };
 
-void *pattern1();
+void *pattern1(void *arg);
 void *pattern2();
 void *pattern3();
 void *pattern4();
