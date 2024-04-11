@@ -35,7 +35,7 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
         printLogScreen(mutexLog, log_file, PATTERN_MUTEX_ERROR, PATTERN_MUTEX_ERROR);
         return -1;
     }
-     
+
     while (1)
     {
         pthread_create(&th_pattern1, NULL, pattern1, NULL);
@@ -46,11 +46,11 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
     }
 
-        pthread_join(th_pattern1, NULL);
-        pthread_join(th_pattern2, NULL);
-        pthread_join(th_pattern3, NULL);
-        pthread_join(th_pattern4, NULL);
-        pthread_join(th_pattern5, NULL);
+    pthread_join(th_pattern1, NULL);
+    pthread_join(th_pattern2, NULL);
+    pthread_join(th_pattern3, NULL);
+    pthread_join(th_pattern4, NULL);
+    pthread_join(th_pattern5, NULL);
     return 0;
 }
 
@@ -87,20 +87,20 @@ void *pattern1(void *arg)
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
-    
+
     // Mostrar los registros ordenados por pantalla
     for (int i = 0; i < num_registros; i++)
     {
         printf("Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                            registros[i].Sucursal,
-                            registros[i].IdOperacion,
-                            registros[i].FECHA_INICIO,
-                            registros[i].FECHA_FIN,
-                            registros[i].IdUsuario,
-                            registros[i].IdTipoOperacion,
-                            registros[i].NoOperacion,
-                            registros[i].Importe,
-                            registros[i].Estado);
+               registros[i].Sucursal,
+               registros[i].IdOperacion,
+               registros[i].FECHA_INICIO,
+               registros[i].FECHA_FIN,
+               registros[i].IdUsuario,
+               registros[i].IdTipoOperacion,
+               registros[i].NoOperacion,
+               registros[i].Importe,
+               registros[i].Estado);
 
     }
 
@@ -135,7 +135,7 @@ void *pattern5()
     // Lógica de comprobación de patrón 5
 }
 
-int leerFicheroConsolidado(){
+int leerFicheroConsolidado() {
     char *ficheroCSV = "../output/fich_consolidado.csv";
 
     // Abrir el archivo en modo lectura y escritura
