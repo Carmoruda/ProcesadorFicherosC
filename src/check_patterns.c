@@ -31,17 +31,16 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
         return -1;
     }
 
-    while (1)
-    {
-        th_pattern1 = pthread_create(&th_pattern1, NULL, pattern1, NULL);
-        th_pattern2 = pthread_create(&th_pattern2, NULL, pattern2, NULL);
+    //while (1)
+    //{
+        pthread_create(&th_pattern1, NULL, pattern1, NULL);
+        /*th_pattern2 = pthread_create(&th_pattern2, NULL, pattern2, NULL);
         th_pattern3 = pthread_create(&th_pattern3, NULL, pattern3, NULL);
         th_pattern4 = pthread_create(&th_pattern4, NULL, pattern4, NULL);
-        th_pattern5 = pthread_create(&th_pattern5, NULL, pattern5, NULL);
+        th_pattern5 = pthread_create(&th_pattern5, NULL, pattern5, NULL);*/
 
-        sleep(10);
-    }
-    pthread_mutex_unlock(&mutexPatterns);
+        //sleep(10);
+    //}
     return 0;
 }
 
@@ -50,7 +49,7 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 void *pattern1()
 {
     printf("HOLA");
-    char *ficheroCSV = "../output/fich_consolidado.csv";
+    /*char *ficheroCSV = "../output/fich_consolidado.csv";
 
     // Abrir el archivo en modo lectura y escritura
     FILE *archivo = fopen(ficheroCSV, "r+");
@@ -132,7 +131,7 @@ void *pattern1()
     // Desbloquear el mutex después de acceder al archivo
     pthread_mutex_unlock(&mutexPatterns);
 
-    pthread_exit(NULL);
+    pthread_exit(NULL);*/
 }
 
 /// --- Pattern 2 ---
