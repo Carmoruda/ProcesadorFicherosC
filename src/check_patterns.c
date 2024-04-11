@@ -41,7 +41,7 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
         sleep(10);
     }
-
+    pthread_mutex_unlock(&mutexPatterns);
     return 0;
 }
 
