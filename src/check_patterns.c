@@ -21,6 +21,7 @@ int enLaMismaHora(char *fecha1, char *fecha2);
 
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
+    printf("AD");
     mutexLog = mutexLogFile;
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
 
@@ -30,28 +31,33 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
         printLogScreen(mutexLog, log_file, PATTERN_MUTEX_ERROR, PATTERN_MUTEX_ERROR);
         return -1;
     }
-
-    //while (1)
-    //{
+     
+    while (1)
+    {
         int a;
         a = pthread_create(&th_pattern1, NULL, pattern1, NULL);
         printf("%d", a);
-        /*th_pattern2 = pthread_create(&th_pattern2, NULL, pattern2, NULL);
+        th_pattern2 = pthread_create(&th_pattern2, NULL, pattern2, NULL);
         th_pattern3 = pthread_create(&th_pattern3, NULL, pattern3, NULL);
         th_pattern4 = pthread_create(&th_pattern4, NULL, pattern4, NULL);
-        th_pattern5 = pthread_create(&th_pattern5, NULL, pattern5, NULL);*/
+        th_pattern5 = pthread_create(&th_pattern5, NULL, pattern5, NULL);
 
-        //sleep(10);
-    //}
+    }
+
+        pthread_join(th_pattern1, NULL);
+        pthread_join(th_pattern2, NULL);
+        pthread_join(th_pattern3, NULL);
+        pthread_join(th_pattern4, NULL);
+        pthread_join(th_pattern5, NULL);
     return 0;
 }
 
 // --- Pattern 1 ---
 
-void *pattern1()
+void *pattern1(void *arg)
 {
     printf("HOLA");
-    /*char *ficheroCSV = "../output/fich_consolidado.csv";
+    char *ficheroCSV = "../output/fich_consolidado.csv";
 
     // Abrir el archivo en modo lectura y escritura
     FILE *archivo = fopen(ficheroCSV, "r+");
@@ -62,10 +68,10 @@ void *pattern1()
     }
 
     // Bloquear el mutex antes de acceder al archivo
-    pthread_mutex_lock(&mutexPatterns);
+    //pthread_mutex_lock(&mutexPatterns);
 
     // Leer los registros del archivo y almacenarlos en una matriz
-    struct Operacion registros[MAX_RECORDS];
+    /*struct Operacion registros[MAX_RECORDS];
     int num_registros = 0;
     char linea[MAX_LINE_LENGTH];
     while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS)
@@ -131,9 +137,9 @@ void *pattern1()
     }
 
     // Desbloquear el mutex después de acceder al archivo
-    pthread_mutex_unlock(&mutexPatterns);
-
-    pthread_exit(NULL);*/
+    //pthread_mutex_unlock(&mutexPatterns);
+*/
+    pthread_exit(NULL);
 }
 
 /// --- Pattern 2 ---
