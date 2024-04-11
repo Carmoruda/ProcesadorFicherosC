@@ -33,7 +33,9 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
     //while (1)
     //{
-        pthread_create(&th_pattern1, NULL, pattern1, NULL);
+        int a;
+        a = pthread_create(&th_pattern1, NULL, pattern1, NULL);
+        printf("%d", a);
         /*th_pattern2 = pthread_create(&th_pattern2, NULL, pattern2, NULL);
         th_pattern3 = pthread_create(&th_pattern3, NULL, pattern3, NULL);
         th_pattern4 = pthread_create(&th_pattern4, NULL, pattern4, NULL);
