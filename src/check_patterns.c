@@ -7,7 +7,7 @@ pthread_mutex_t mutexPatterns;
 
 struct Operacion registros[MAX_RECORDS];
 struct Operacion reg_patrones[MAX_RECORDS];
-
+int num_registros;
 /// @brief Compara dos operaciones para la funcion qsort, que ordena el fichero csv en orden de usuario.
 /// @param a Primera operación.
 /// @param b Segunda operación.
@@ -37,20 +37,24 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
 
     // Inicializar el mutex
-    if (pthread_mutex_init(&mutexPatterns, NULL) != 0)
-    {
-        printLogScreen(mutexLog, log_file, PATTERN_MUTEX_ERROR, PATTERN_MUTEX_ERROR);
-        return -1;
-    }
-
-    while (1)
-    {
+    //if (pthread_mutex_init(&mutexPatterns, NULL) != 0)
+    //{
+    //    printLogScreen(mutexLog, log_file, PATTERN_MUTEX_ERROR, PATTERN_MUTEX_ERROR);
+    //    return -1;
+    //}
+    
+    while(1){
+        num_registros = readConsolidatedFile();
+        
         pthread_create(&th_pattern1, NULL, pattern1, NULL);
         pthread_create(&th_pattern2, NULL, pattern2, NULL);
         pthread_create(&th_pattern3, NULL, pattern3, NULL);
         pthread_create(&th_pattern4, NULL, pattern4, NULL);
         pthread_create(&th_pattern5, NULL, pattern5, NULL);
+        
     }
+
+    
 
     pthread_join(th_pattern1, NULL);
     pthread_join(th_pattern2, NULL);
@@ -64,32 +68,37 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
 void *pattern1(void *arg)
 {
-    int num_registros = readConsolidatedFile();
 
     int contadorOperaciones = 0;
     char ultimoUsuario[100];
     char ultimoTiempo[100];
     bool cumpleCondicion = false;
-
+    
     for (int i = 0; i < num_registros; i++)
     {
+        
         // Verificar si es la misma persona y si la operación está dentro del rango de una hora
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) && enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1)
         {
+            
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
+            
             // Si el usuario realiza 5 o más operaciones dentro de una hora, hacer algo
             if (contadorOperaciones >= 5)
             {
                 cumpleCondicion = true;
             }
+            
+            
         }
         else
         {
+            
             if(cumpleCondicion == true){
+                
                 for(int i = 0; i < contadorOperaciones; i++){
                     printf("Datos de la operacion que provoca el patron 1:\n  Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                        i,
                         registros[i].Sucursal,
                         registros[i].IdOperacion,
                         registros[i].FECHA_INICIO,
@@ -100,27 +109,30 @@ void *pattern1(void *arg)
                         registros[i].Importe,
                         registros[i].Estado);
                 }
+                printf("FIN DEL PATRON\n\n\n\n");
                 cumpleCondicion = false;
+                
             }
 
 
             // Reiniciar el contador de operaciones para un nuevo usuario o una nueva hora
             contadorOperaciones = 0;
+            
         }
-
+    
         // Actualizar el usuario y el tiempo para la próxima iteración
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
-
+    
     pthread_exit(NULL);
+    
 }
 
 /// --- Pattern 2 ---
 
 void *pattern2(void *arg)
 {
-    int num_registros = readConsolidatedFile(registros);
 
     int contadorOperaciones = 0;
     char ultimoUsuario[20];
@@ -145,7 +157,6 @@ void *pattern2(void *arg)
             if(cumpleCondicion == true){
                 for(int i = 0; i < contadorOperaciones; i++){
                     printf("Datos de operacion que provoca el patron 2:\n  Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                        i,
                         registros[i].Sucursal,
                         registros[i].IdOperacion,
                         registros[i].FECHA_INICIO,
@@ -156,6 +167,7 @@ void *pattern2(void *arg)
                         registros[i].Importe,
                         registros[i].Estado);
                 }
+                printf("FIN PATRON 2\n\n\n\n");
                 cumpleCondicion = false;
             }
 
@@ -176,8 +188,7 @@ void *pattern2(void *arg)
 
 void *pattern3(void *arg)
 {
-    int num_registros = readConsolidatedFile(registros);
-
+    
     int contadorOperaciones = 0;
     char ultimoUsuario[20];
     char ultimoTiempo[20];
@@ -201,7 +212,6 @@ void *pattern3(void *arg)
             if(cumpleCondicion == true){
                 for(int i = 0; i < contadorOperaciones; i++){
                     printf("Datos de operacion que provoca el patron 3:\n  Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                        i,
                         registros[i].Sucursal,
                         registros[i].IdOperacion,
                         registros[i].FECHA_INICIO,
@@ -234,7 +244,7 @@ void *pattern3(void *arg)
 
 void *pattern4(void *arg)
 {
-    int num_registros = readConsolidatedFile(registros);
+
 
     int contadorOperaciones = 0;
     char ultimoUsuario[20];
@@ -244,7 +254,7 @@ void *pattern4(void *arg)
 
     for (int i = 0; i < num_registros; i++)
     {
-        // Verificar si es la misma persona y si la operación está dentro del rango de una hora
+        // Verificar si es la misma persona y si la operación está dentro del rango de un dia
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) && enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1)
         {
             tipo = registros[i].IdTipoOperacion[7];
@@ -270,7 +280,6 @@ void *pattern4(void *arg)
             if(cumpleCondicion[0] == cumpleCondicion[1] == cumpleCondicion[2] == cumpleCondicion[3] == 1){
                 for(int i = 0; i < contadorOperaciones; i++){
                     printf("Datos de operacion que provoca el patron 3:\n  Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                        i,
                         registros[i].Sucursal,
                         registros[i].IdOperacion,
                         registros[i].FECHA_INICIO,
@@ -297,9 +306,6 @@ void *pattern4(void *arg)
 
 void *pattern5(void *arg)
 {
-    int num_registros;
-
-    num_registros = readConsolidatedFile(registros);
 
     int contadorOperaciones = 0;
     char ultimoUsuario[20];
@@ -338,7 +344,7 @@ void *pattern5(void *arg)
 int readConsolidatedFile(){
 
     int num_registros = 0;
-    char *archive = "../output/fich_consolidado.csv";
+    char archive[200] = "../output/fich_consolidado.csv";
 
     // Abrir el archivo en modo lectura y escritura
     FILE *archivo = fopen(archive, "r+");
@@ -349,7 +355,7 @@ int readConsolidatedFile(){
     }
 
     // Bloquear el mutex antes de acceder al archivo
-    pthread_mutex_lock(&mutexPatterns);
+    //pthread_mutex_lock(&mutexPatterns);
 
     // Leer los registros del archivo y almacenarlos en una matriz
    
@@ -376,11 +382,12 @@ int readConsolidatedFile(){
     fclose(archivo);
 
     // Desbloquear el mutex después de acceder al archivo
-    pthread_mutex_unlock(&mutexPatterns);
+    //pthread_mutex_unlock(&mutexPatterns);
 
-    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
-    // Ordenar el vector por fecha de inicio
+    // Ordenar el vector por fecha de inicio y usuario
     qsort(registros, num_registros, sizeof(struct Operacion), comparar_por_fecha_inicio);
+    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    
 
     return num_registros;
 }
@@ -391,6 +398,7 @@ int comparar_registros(const void *a, const void *b)
     const struct Operacion *registro2 = (const struct Operacion *)b;
 
     return strcmp(registro1->IdUsuario, registro2->IdUsuario);
+    
 }
 // Función de comparación para ordenar por fecha de inicio
 int comparar_por_fecha_inicio(const void *a, const void *b) {
