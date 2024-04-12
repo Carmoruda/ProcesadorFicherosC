@@ -24,6 +24,8 @@ struct Operacion {
     float Importe;
     char Estado[20];
     int Sucursal;
+    float DineroIngr;
+    float DineroRet;
 };
 
 void *pattern1(void *arg);
