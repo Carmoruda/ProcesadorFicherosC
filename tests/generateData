@@ -31,7 +31,7 @@ while getopts ":l:s:t:u:h" opt; do
       echo "Options:"
       echo "         -l, --lines            Stablish number of lines"
       echo "         -s, --sucursal         Stablish sucursal´s ID (From 1 to 4. Exp: -s SU001)"
-      echo "         -t, --type             Stablish operation type"
+      echo "         -t, --type             Stablish operation type (From 1 to 4.)"
       echo "         -u, --users            Stablish number of users"
       ;;
     ?)
@@ -40,6 +40,11 @@ while getopts ":l:s:t:u:h" opt; do
   esac
 done
 
+if [ $type_operation -gt 4 ]; then
+  type_operation=$((type_operation / 4))
+fi
+
+
 if [[ -z $lines || -z $sucursal_number || -z $type_operation || -z $user_number ]]; then
   echo "All arguments are mandatory. Use -h to see available options"
   exit 1
@@ -47,7 +52,7 @@ fi
 
 fecha=$(generateDate)
 
-fileNumber=$((RANDOM % 300000 + 1))
+fileNumber=$((RANDOM % 10 + 1))
 
 filename="${sucursal_number}_${type_operation}_${fecha}_${fileNumber}.data"
 
