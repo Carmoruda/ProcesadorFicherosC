@@ -316,7 +316,6 @@ int processFilesProcess()
 
     // Inicializar hilos
     pthread_t th1, th2, th3, th4;
-
     // Mostrar path ficheros
     time_t time_date = time(NULL);                   // Dato de tiempo
     struct tm current_time = *localtime(&time_date); // Fecha y hora actual
