@@ -80,7 +80,6 @@ int main()
     if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
     {
         processFilesProcess();
-        
     }
     
     if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones

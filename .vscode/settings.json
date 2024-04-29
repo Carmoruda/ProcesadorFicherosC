@@ -17,6 +17,7 @@
         "error_messages.h": "c",
         "check_patterns.h": "c",
         "semaphore.h": "c",
-        "common_components.h": "c"
+        "common_components.h": "c",
+        "sstream": "c"
     }
 }
