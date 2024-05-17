@@ -37,12 +37,14 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
 
     // Inicializar el mutex
-    //if (pthread_mutex_init(&mutexPatterns, NULL) != 0)
-    //{
-    //    printLogScreen(mutexLog, log_file, PATTERN_MUTEX_ERROR, PATTERN_MUTEX_ERROR);
-    //    return -1;
-    //}
-    
+    if (pthread_mutex_init(&mutexPatterns, NULL) != 0)
+    {
+        printLogScreen(mutexLog, log_file, PATTERN_MUTEX_ERROR, PATTERN_MUTEX_ERROR);
+        return -1;
+    }
+
+    setbuf(stdout, NULL); //Se desactiva el buffer de salida para el flujo actual
+
     while(1){
         num_registros = readConsolidatedFile();
         
