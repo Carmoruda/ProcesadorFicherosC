@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <semaphore.h>
 #include <sys/inotify.h>
+#include <sys/wait.h>
 #include "../include/show_information.h"
 #include "../include/error_messages.h"
 #include "../include/program_data.h"
@@ -65,6 +66,13 @@ void *verifyNewFile();
 
 int processFilesProcess();
 
+/// @brief Muestra el menú de inicio del programa
+/// @param error_flag flag de error en la opción del usuario
+/// @return Opción elegida
+int menu(int error_flag);
+
+/// @brief Da comienzo a la auditoria
+void StartAudit();
 
 
 int main()
@@ -72,24 +80,80 @@ int main()
     // Leer archivo de configuración
     FILE *file = fopen(CONFIG_PATH, "r");
     readConfigFile(file);
+    char *args[] = {"./create_structure.sh", NULL};
+    bool isProgramRunning = true;
 
+    do{
+    
+    switch (menu(0))
+    {
+    case 1: //Ejecutar script creación estructura directorios
+        pid_t pid = fork();
+        if (pid == -1) {
+            perror("fork failed");
+            return 1;
+        } else if (pid == 0) { 
+            execvp(args[0], args);
+            perror("execvp failed");
+            return 1;
+        } else { 
+            
+            int status;
+            waitpid(pid, &status, 0);
+        
+        }
+        break;
+
+    case 2: //Ejecutar programa
+        StartAudit();
+        break;    
+    
+    case 3:
+        printf("Saliendo del programa...");
+        isProgramRunning = false;
+    default:
+        printf("Error en la interpretación de la opción elejida. Saliendo...");
+        isProgramRunning = false;
+        break;
+    }
+    } while (isProgramRunning);
+    
+
+    return 0;
+}
+
+void StartAudit(){
     // Proceso comprobar patrones
     pid_t proceso_patrones;
 
     proceso_patrones = fork();
     if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
     {
+        setsid();
         processFilesProcess();
         
     }
     
     if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
     {
+        setsid();
         printf("SOY EL HIJO");
         checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
     }
+}
 
-    return 0;
+int menu(int error_flag){
+    int opcion;
+    printf("UFV AUDITA\n\n");
+
+    if(error_flag == 1){
+        printf("Seleccione una opción válida.\n");
+    }
+    
+    printf("1. Crear estructura de ficheros\n2. Iniciar\n3. Salir\n\n=> ");
+    scanf("%d", &opcion);
+    return opcion > 3 || opcion < 1 ? menu(1) : opcion;
+
 }
 
 void readConfigFile(FILE *pf_config)
