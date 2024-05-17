@@ -11,18 +11,18 @@ while read -r line || [[ -n "$line" ]]; do
 
     # Dividir la línea en clave y valor usando '=' como delimitador
     IFS='=' read -r key value <<< "$line"
-    
+
     # Eliminar espacios en blanco alrededor de la clave y valor
     key=$(echo "$key" | xargs)
     value=$(echo "$value" | xargs)
-    
+
     # Almacenar valores en variables correspondientes
     if [[ "$key" == "FATHER_DIR" ]]; then
         father_dir="$value"
     elif [[ "$key" == "SUC_DIR" ]]; then
         suc_dir="$value"
     fi
-done < fp.conf
+done < ../conf/fp.conf
 
 
 

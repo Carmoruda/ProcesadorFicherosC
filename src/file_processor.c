@@ -2,17 +2,17 @@
 #include "../include/error_messages.h"
 #include "../include/program_data.h"
 #include "../include/show_information.h"
-#include <dirent.h>
-#include <pthread.h>
+#include <sys/inotify.h>
 #include <semaphore.h>
+#include <sys/wait.h>
+#include <pthread.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/inotify.h>
-#include <sys/wait.h>
-#include <time.h>
+#include <dirent.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <time.h>
 
 pthread_cond_t cond;          // Variable de condición de los hilos
 pthread_mutex_t mutex;        // Mutex para la exclusión mutua
@@ -23,20 +23,24 @@ DIR *folder; // Directorio de archivos de las sucursales
 
 /// @brief Estructura que contiene la información de los archivos de las
 /// sucursales
-typedef struct sucursal_file {
+typedef struct sucursal_file
+{
   char file_name[100]; // Nombre del fichero
   int sucursal_number; // Número de la sucursal
   int num_operations;  // Número de operaciones realizadas
 } sucursal_file;
 
 /// @brief Estructura que contiene la información del archivo de configuración
-struct config_file {
-  char path_files[100];     // Directorio de archivos
+struct config_file
+{
+  char path_files[100];     // Directorio padre de archivos
+  char suc_dir[100];        // Directorios de archivos de las sucursales
   char inventory_file[100]; // Fichero consolidado
   char log_file[100];       // Fichero de log
   int num_processes;        // Número de procesos
   int simulate_sleep_max;   // Tiempo máximo de simulación
   int simulate_sleep_min;   // Tiempo mínimo de simulación
+  int size_fp;              // Tamaño máximo de la memoria compartida
 } config_file;
 
 /// @brief Leer la información del archivo de configuración
@@ -70,26 +74,34 @@ int menu(int error_flag);
 /// @brief Da comienzo a la auditoria
 void StartAudit();
 
-int main() {
+int main()
+{
   // Leer archivo de configuración
   FILE *file = fopen(CONFIG_PATH, "r");
   readConfigFile(file);
   char *args[] = {"./create_structure.sh", NULL};
   bool isProgramRunning = true;
 
-  do {
+  do
+  {
 
-    switch (menu(0)) {
+    switch (menu(0))
+    {
     case 1: // Ejecutar script creación estructura directorios
       pid_t pid = fork();
-      if (pid == -1) {
+      if (pid == -1)
+      {
         perror("fork failed");
         return 1;
-      } else if (pid == 0) {
+      }
+      else if (pid == 0)
+      {
         execvp(args[0], args);
         perror("execvp failed");
         return 1;
-      } else {
+      }
+      else
+      {
 
         int status;
         waitpid(pid, &status, 0);
@@ -103,6 +115,7 @@ int main() {
     case 3:
       printf("Saliendo del programa...");
       isProgramRunning = false;
+      break;
     default:
       printf("Error en la interpretación de la opción elejida. Saliendo...");
       isProgramRunning = false;
@@ -113,7 +126,8 @@ int main() {
   return 0;
 }
 
-void StartAudit() {
+void StartAudit()
+{
   // Proceso comprobar patrones
   pid_t proceso_patrones;
 
@@ -131,11 +145,13 @@ void StartAudit() {
   }
 }
 
-int menu(int error_flag) {
+int menu(int error_flag)
+{
   int opcion;
   printf("UFV AUDITA\n\n");
 
-  if (error_flag == 1) {
+  if (error_flag == 1)
+  {
     printf("Seleccione una opción válida.\n");
   }
 
@@ -144,7 +160,8 @@ int menu(int error_flag) {
   return opcion > 3 || opcion < 1 ? menu(1) : opcion;
 }
 
-void readConfigFile(FILE *pf_config) {
+void readConfigFile(FILE *pf_config)
+{
   int contador = 0;
   char line[256];
 
@@ -158,24 +175,32 @@ void readConfigFile(FILE *pf_config) {
 
       token[strcspn(token, "\n")] = '\0'; // Elimina el salto de línea.
 
-      switch (contador) {
-      case 1: // PATH_FILES
+      switch (contador)
+      {
+      case 1: // FATHER_DIR
         strcpy(config_file.path_files, token);
         break;
-      case 3: // INVENTORY_FILE
+      case 3: // SUC_DIR
+        strcpy(config_file.suc_dir, token);
+        config_file.suc_dir[strcspn(config_file.suc_dir, "{")] = '\0';
+        break;
+      case 5: // INVENTORY_FILE
         strcpy(config_file.inventory_file, token);
         break;
-      case 5: // LOG_FILE
+      case 7: // LOG_FILE
         strcpy(config_file.log_file, token);
         break;
-      case 7: // NUM_PROCESSES
+      case 9: // NUM_PROCESSES
         config_file.num_processes = atoi(token);
         break;
-      case 9: // SIMULATE_SLEEP_MAX
+      case 11: // SIMULATE_SLEEP_MAX
         config_file.simulate_sleep_max = atoi(token);
         break;
-      case 11: // SIMULATE_SLEEP_MIN
+      case 13: // SIMULATE_SLEEP_MIN
         config_file.simulate_sleep_min = atoi(token);
+        break;
+      case 15: // SIZE_FP
+        config_file.size_fp = atoi(token);
         break;
       default:
         break;
@@ -187,7 +212,8 @@ void readConfigFile(FILE *pf_config) {
   }
 }
 
-sucursal_file *newFile(char *file_name, int sucursal_number) {
+sucursal_file *newFile(char *file_name, int sucursal_number)
+{
   sucursal_file *nueva_sucursal = (sucursal_file *)malloc(
       sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
 
@@ -203,7 +229,8 @@ sucursal_file *newFile(char *file_name, int sucursal_number) {
   return nueva_sucursal;
 }
 
-void *reader(void *file) {
+void *reader(void *file)
+{
   // Se establece simulación de espera
   srand(time(NULL));
   sleep(rand() % config_file.simulate_sleep_max +
@@ -214,7 +241,8 @@ void *reader(void *file) {
   pthread_exit(NULL); // Salir del hilo
 }
 
-void processFiles(sucursal_file *file) {
+void processFiles(sucursal_file *file)
+{
   char line[256];                               // Línea del fichero
   time_t time_date = time(NULL);                // Dato de tiempo
   char control;                                 // Control de lectura
@@ -232,13 +260,15 @@ void processFiles(sucursal_file *file) {
   FILE *consolidated_file =
       fopen(config_file.inventory_file, "a"); // Archivo consolidado
 
-  if (sucursal_file == NULL) {
+  if (sucursal_file == NULL)
+  {
     sprintf(logString, SUCURSAL_ERROR, file->file_name);
     printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
     return;
   }
 
-  if (consolidated_file == NULL) {
+  if (consolidated_file == NULL)
+  {
     printLogScreen(mutexLogFile, config_file.log_file, CONSOLIDADO_OPEN_ERROR,
                    CONSOLIDADO_OPEN_ERROR);
     return;
@@ -256,7 +286,8 @@ void processFiles(sucursal_file *file) {
 
   struct tm current_time = *localtime(&time_date); // Fecha y hora actual
 
-  while (fgets(line, sizeof(line), sucursal_file)) {
+  while (fgets(line, sizeof(line), sucursal_file))
+  {
     fprintf(consolidated_file, "%d;%s", file->sucursal_number,
             line);          // Escribir en el fichero consolidado
     file->num_operations++; // Incrementar el número de operaciones
@@ -283,7 +314,8 @@ void processFiles(sucursal_file *file) {
   pthread_mutex_unlock(&mutex); // Desbloquear el mutex
 }
 
-void *verifyNewFile() {
+void *verifyNewFile()
+{
   char *logString; // Mensaje a escribir en el log
   int fileDescriptor, watchDescriptor;
   char buffer[BUFFER_LENGTH];
@@ -291,7 +323,8 @@ void *verifyNewFile() {
   // Se inicializa el descriptor del inotify
   fileDescriptor = inotify_init();
 
-  if (fileDescriptor < 0) { // Se comprueba que se inicialice el descriptor
+  if (fileDescriptor < 0)
+  { // Se comprueba que se inicialice el descriptor
     printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR,
                    INOTIFY_DESCRIPTOR_ERROR);
     exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con
@@ -302,7 +335,8 @@ void *verifyNewFile() {
   watchDescriptor =
       inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
 
-  if (watchDescriptor < 0) { // Se comprueba que se inicialice el watcher
+  if (watchDescriptor < 0)
+  { // Se comprueba que se inicialice el watcher
     printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR,
                    INOTIFY_WATCHER_ERROR);
     exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con
@@ -310,14 +344,16 @@ void *verifyNewFile() {
   }
 
   // Se queda a la espera de eventos
-  while (1) {
+  while (1)
+  {
     int length, i = 0;
     time_t time_date = time(NULL); // Dato de tiempo
 
     // Se leen los bytes del evento
     length = read(fileDescriptor, buffer, BUFFER_LENGTH);
 
-    if (length < 0) { // Se comprueba que se inicialice correctamente
+    if (length < 0)
+    { // Se comprueba que se inicialice correctamente
       printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR,
                      INOTIFY_LENGTH_ERROR);
       exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso
@@ -325,7 +361,8 @@ void *verifyNewFile() {
     }
 
     // Se procesan los eventos
-    while (i < length) {
+    while (i < length)
+    {
       char *newNotificationScreen =
           "\n\n\n"
           "###               ###   ############   ###                          "
@@ -372,7 +409,8 @@ void *verifyNewFile() {
 }
 // --- PROCESS FUNCTIONS ---
 
-int processFilesProcess() {
+int processFilesProcess()
+{
   sucursal_file *nueva_sucursal;
 
   // Path a los archivos
@@ -414,7 +452,8 @@ int processFilesProcess() {
   int controler;
   controler = pthread_create(&newFileThread, NULL, verifyNewFile, NULL);
 
-  if (controler < 0) {
+  if (controler < 0)
+  {
     printLogScreen(mutexLogFile, config_file.log_file, VERIFIER_THREAD_ERROR,
                    VERIFIER_THREAD_ERROR);
   }
@@ -424,17 +463,21 @@ int processFilesProcess() {
 
   folder = opendir(config_file.path_files);
 
-  if (folder == NULL) {
+  if (folder == NULL)
+  {
     sprintf(logString, FOLDER_OPEN_ERROR, folder);
     printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
     return -1;
   }
 
-  while (1) {
-    while ((directorio = readdir(folder)) != NULL) {
+  while (1)
+  {
+    while ((directorio = readdir(folder)) != NULL)
+    {
       if (directorio->d_type == DT_REG) // Comprobar que sea un archivo
       {
-        switch (directorio->d_name[4]) {
+        switch (directorio->d_name[4])
+        {
         case '1':
           nueva_sucursal =
               newFile(directorio->d_name,
