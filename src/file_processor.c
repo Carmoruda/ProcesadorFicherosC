@@ -153,7 +153,6 @@ int menu(int error_flag){
     printf("1. Crear estructura de ficheros\n2. Iniciar\n3. Salir\n\n=> ");
     scanf("%d", &opcion);
     return opcion > 3 || opcion < 1 ? menu(1) : opcion;
-
 }
 
 void readConfigFile(FILE *pf_config)
