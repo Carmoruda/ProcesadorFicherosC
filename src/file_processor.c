@@ -83,46 +83,46 @@ int main()
     char *args[] = {"./create_structure.sh", NULL};
     bool isProgramRunning = true;
 
-    do{
-    
-    switch (menu(0))
-    {
-    case 1: //Ejecutar script creación estructura directorios
-        pid_t pid = fork();
-        if (pid == -1) {
-            perror("fork failed");
-            return 1;
-        } else if (pid == 0) { 
-            execvp(args[0], args);
-            perror("execvp failed");
-            return 1;
-        } else { 
-            
-            int status;
-            waitpid(pid, &status, 0);
-        
-        }
-        break;
+    do {
 
-    case 2: //Ejecutar programa
-        StartAudit();
-        break;    
-    
-    case 3:
-        printf("Saliendo del programa...");
-        isProgramRunning = false;
-    default:
-        printf("Error en la interpretación de la opción elejida. Saliendo...");
-        isProgramRunning = false;
-        break;
-    }
+        switch (menu(0))
+        {
+        case 1: //Ejecutar script creación estructura directorios
+            pid_t pid = fork();
+            if (pid == -1) {
+                perror("fork failed");
+                return 1;
+            } else if (pid == 0) {
+                execvp(args[0], args);
+                perror("execvp failed");
+                return 1;
+            } else {
+
+                int status;
+                waitpid(pid, &status, 0);
+
+            }
+            break;
+
+        case 2: //Ejecutar programa
+            StartAudit();
+            break;
+
+        case 3:
+            printf("Saliendo del programa...");
+            isProgramRunning = false;
+        default:
+            printf("Error en la interpretación de la opción elejida. Saliendo...");
+            isProgramRunning = false;
+            break;
+        }
     } while (isProgramRunning);
-    
+
 
     return 0;
 }
 
-void StartAudit(){
+void StartAudit() {
     // Proceso comprobar patrones
     pid_t proceso_patrones;
 
@@ -131,9 +131,9 @@ void StartAudit(){
     {
         setsid();
         processFilesProcess();
-        
+
     }
-    
+
     if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
     {
         setsid();
@@ -142,14 +142,14 @@ void StartAudit(){
     }
 }
 
-int menu(int error_flag){
+int menu(int error_flag) {
     int opcion;
     printf("UFV AUDITA\n\n");
 
-    if(error_flag == 1){
+    if(error_flag == 1) {
         printf("Seleccione una opción válida.\n");
     }
-    
+
     printf("1. Crear estructura de ficheros\n2. Iniciar\n3. Salir\n\n=> ");
     scanf("%d", &opcion);
     return opcion > 3 || opcion < 1 ? menu(1) : opcion;
@@ -294,7 +294,7 @@ void *verifyNewFile()
     fileDescriptor = inotify_init();
 
     if (fileDescriptor < 0)
-    { // Se comprueba que se inicialice el descriptor
+    {   // Se comprueba que se inicialice el descriptor
         printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -303,7 +303,7 @@ void *verifyNewFile()
     watchDescriptor = inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
 
     if (watchDescriptor < 0)
-    { // Se comprueba que se inicialice el watcher
+    {   // Se comprueba que se inicialice el watcher
         printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -318,7 +318,7 @@ void *verifyNewFile()
         length = read(fileDescriptor, buffer, BUFFER_LENGTH);
 
         if (length < 0)
-        { // Se comprueba que se inicialice correctamente
+        {   // Se comprueba que se inicialice correctamente
             printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
             exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
         }

@@ -45,18 +45,18 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
     setbuf(stdout, NULL); //Se desactiva el buffer de salida para el flujo actual
 
-    while(1){
+    while(1) {
         num_registros = readConsolidatedFile();
-        
+
         pthread_create(&th_pattern1, NULL, pattern1, NULL);
         pthread_create(&th_pattern2, NULL, pattern2, NULL);
         pthread_create(&th_pattern3, NULL, pattern3, NULL);
         pthread_create(&th_pattern4, NULL, pattern4, NULL);
         pthread_create(&th_pattern5, NULL, pattern5, NULL);
-        
+
     }
 
-    
+
 
     pthread_join(th_pattern1, NULL);
     pthread_join(th_pattern2, NULL);
@@ -75,60 +75,60 @@ void *pattern1(void *arg)
     char ultimoUsuario[100];
     char ultimoTiempo[100];
     bool cumpleCondicion = false;
-    
+
     for (int i = 0; i < num_registros; i++)
     {
-        
+
         // Verificar si es la misma persona y si la operación está dentro del rango de una hora
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) && enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1)
         {
-            
+
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
-            
+
             // Si el usuario realiza 5 o más operaciones dentro de una hora, hacer algo
             if (contadorOperaciones >= 5)
             {
                 cumpleCondicion = true;
             }
-            
-            
+
+
         }
         else
         {
-            
-            if(cumpleCondicion == true){
-                
-                for(int i = 0; i < contadorOperaciones; i++){
+
+            if(cumpleCondicion == true) {
+
+                for(int i = 0; i < contadorOperaciones; i++) {
                     printf("Datos de la operacion que provoca el patron 1:\n  Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                        registros[i].Sucursal,
-                        registros[i].IdOperacion,
-                        registros[i].FECHA_INICIO,
-                        registros[i].FECHA_FIN,
-                        registros[i].IdUsuario,
-                        registros[i].IdTipoOperacion,
-                        registros[i].NoOperacion,
-                        registros[i].Importe,
-                        registros[i].Estado);
+                           registros[i].Sucursal,
+                           registros[i].IdOperacion,
+                           registros[i].FECHA_INICIO,
+                           registros[i].FECHA_FIN,
+                           registros[i].IdUsuario,
+                           registros[i].IdTipoOperacion,
+                           registros[i].NoOperacion,
+                           registros[i].Importe,
+                           registros[i].Estado);
                 }
                 printf("FIN DEL PATRON\n\n\n\n");
                 cumpleCondicion = false;
-                
+
             }
 
 
             // Reiniciar el contador de operaciones para un nuevo usuario o una nueva hora
             contadorOperaciones = 0;
-            
+
         }
-    
+
         // Actualizar el usuario y el tiempo para la próxima iteración
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
-    
+
     pthread_exit(NULL);
-    
+
 }
 
 /// --- Pattern 2 ---
@@ -156,18 +156,18 @@ void *pattern2(void *arg)
         }
         else
         {
-            if(cumpleCondicion == true){
-                for(int i = 0; i < contadorOperaciones; i++){
+            if(cumpleCondicion == true) {
+                for(int i = 0; i < contadorOperaciones; i++) {
                     printf("Datos de operacion que provoca el patron 2:\n  Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                        registros[i].Sucursal,
-                        registros[i].IdOperacion,
-                        registros[i].FECHA_INICIO,
-                        registros[i].FECHA_FIN,
-                        registros[i].IdUsuario,
-                        registros[i].IdTipoOperacion,
-                        registros[i].NoOperacion,
-                        registros[i].Importe,
-                        registros[i].Estado);
+                           registros[i].Sucursal,
+                           registros[i].IdOperacion,
+                           registros[i].FECHA_INICIO,
+                           registros[i].FECHA_FIN,
+                           registros[i].IdUsuario,
+                           registros[i].IdTipoOperacion,
+                           registros[i].NoOperacion,
+                           registros[i].Importe,
+                           registros[i].Estado);
                 }
                 printf("FIN PATRON 2\n\n\n\n");
                 cumpleCondicion = false;
@@ -190,7 +190,7 @@ void *pattern2(void *arg)
 
 void *pattern3(void *arg)
 {
-    
+
     int contadorOperaciones = 0;
     char ultimoUsuario[20];
     char ultimoTiempo[20];
@@ -211,18 +211,18 @@ void *pattern3(void *arg)
         }
         else
         {
-            if(cumpleCondicion == true){
-                for(int i = 0; i < contadorOperaciones; i++){
+            if(cumpleCondicion == true) {
+                for(int i = 0; i < contadorOperaciones; i++) {
                     printf("Datos de operacion que provoca el patron 3:\n  Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                        registros[i].Sucursal,
-                        registros[i].IdOperacion,
-                        registros[i].FECHA_INICIO,
-                        registros[i].FECHA_FIN,
-                        registros[i].IdUsuario,
-                        registros[i].IdTipoOperacion,
-                        registros[i].NoOperacion,
-                        registros[i].Importe,
-                        registros[i].Estado);
+                           registros[i].Sucursal,
+                           registros[i].IdOperacion,
+                           registros[i].FECHA_INICIO,
+                           registros[i].FECHA_FIN,
+                           registros[i].IdUsuario,
+                           registros[i].IdTipoOperacion,
+                           registros[i].NoOperacion,
+                           registros[i].Importe,
+                           registros[i].Estado);
                 }
                 cumpleCondicion = false;
             }
@@ -260,37 +260,37 @@ void *pattern4(void *arg)
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) && enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1)
         {
             tipo = registros[i].IdTipoOperacion[7];
-            switch(tipo){
-                case '1':
+            switch(tipo) {
+            case '1':
                 cumpleCondicion[0] = 1;
                 break;
-                case '2':
+            case '2':
                 cumpleCondicion[1] = 1;
                 break;
-                case '3':
+            case '3':
                 cumpleCondicion[2] = 1;
                 break;
-                case '4':
+            case '4':
                 cumpleCondicion[3] = 1;
                 break;
             }
-           
+
         }
 
         else
         {
-            if(cumpleCondicion[0] == cumpleCondicion[1] == cumpleCondicion[2] == cumpleCondicion[3] == 1){
-                for(int i = 0; i < contadorOperaciones; i++){
+            if(cumpleCondicion[0] == cumpleCondicion[1] == cumpleCondicion[2] == cumpleCondicion[3] == 1) {
+                for(int i = 0; i < contadorOperaciones; i++) {
                     printf("Datos de operacion que provoca el patron 3:\n  Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, Importe: %.2f, Estado: %s\n",
-                        registros[i].Sucursal,
-                        registros[i].IdOperacion,
-                        registros[i].FECHA_INICIO,
-                        registros[i].FECHA_FIN,
-                        registros[i].IdUsuario,
-                        registros[i].IdTipoOperacion,
-                        registros[i].NoOperacion,
-                        registros[i].Importe,
-                        registros[i].Estado);
+                           registros[i].Sucursal,
+                           registros[i].IdOperacion,
+                           registros[i].FECHA_INICIO,
+                           registros[i].FECHA_FIN,
+                           registros[i].IdUsuario,
+                           registros[i].IdTipoOperacion,
+                           registros[i].NoOperacion,
+                           registros[i].Importe,
+                           registros[i].Estado);
                 }
                 cumpleCondicion[0] = cumpleCondicion[1] = cumpleCondicion[2] = cumpleCondicion[3] = 0;
             }
@@ -343,7 +343,7 @@ void *pattern5(void *arg)
 
     pthread_exit(NULL);
 }
-int readConsolidatedFile(){
+int readConsolidatedFile() {
 
     int num_registros = 0;
     char archive[200] = "../output/fich_consolidado.csv";
@@ -360,7 +360,7 @@ int readConsolidatedFile(){
     //pthread_mutex_lock(&mutexPatterns);
 
     // Leer los registros del archivo y almacenarlos en una matriz
-   
+
     char linea[MAX_LINE_LENGTH];
     while (fgets(linea, sizeof(linea), archivo) != NULL && num_registros < MAX_RECORDS)
     {
@@ -375,8 +375,8 @@ int readConsolidatedFile(){
                &registros[num_registros].NoOperacion,
                &registros[num_registros].Importe,
                registros[num_registros].Estado);
-               registros[num_registros].DineroIngr = 0;
-               registros[num_registros].DineroRet = 0;
+        registros[num_registros].DineroIngr = 0;
+        registros[num_registros].DineroRet = 0;
         num_registros++;
 
     }
@@ -389,7 +389,7 @@ int readConsolidatedFile(){
     // Ordenar el vector por fecha de inicio y usuario
     qsort(registros, num_registros, sizeof(struct Operacion), comparar_por_fecha_inicio);
     qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
-    
+
 
     return num_registros;
 }
@@ -400,7 +400,7 @@ int comparar_registros(const void *a, const void *b)
     const struct Operacion *registro2 = (const struct Operacion *)b;
 
     return strcmp(registro1->IdUsuario, registro2->IdUsuario);
-    
+
 }
 // Función de comparación para ordenar por fecha de inicio
 int comparar_por_fecha_inicio(const void *a, const void *b) {
