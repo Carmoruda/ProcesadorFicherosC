@@ -120,13 +120,11 @@ void StartAudit() {
   proceso_patrones = fork();
   if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
   {
-    setsid();
     processFilesProcess();
   }
 
   if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
   {
-    setsid();
     printf("SOY EL HIJO");
     checkPatternsProcess(mutexLogFile, config_file.log_file,
                          config_file.inventory_file);
