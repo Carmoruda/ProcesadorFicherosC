@@ -81,7 +81,7 @@ int main()
     {
         processFilesProcess();
     }
-    
+
     if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
     {
         printf("SOY EL HIJO");
@@ -230,7 +230,7 @@ void *verifyNewFile()
     fileDescriptor = inotify_init();
 
     if (fileDescriptor < 0)
-    { // Se comprueba que se inicialice el descriptor
+    {   // Se comprueba que se inicialice el descriptor
         printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -239,7 +239,7 @@ void *verifyNewFile()
     watchDescriptor = inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
 
     if (watchDescriptor < 0)
-    { // Se comprueba que se inicialice el watcher
+    {   // Se comprueba que se inicialice el watcher
         printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -254,7 +254,7 @@ void *verifyNewFile()
         length = read(fileDescriptor, buffer, BUFFER_LENGTH);
 
         if (length < 0)
-        { // Se comprueba que se inicialice correctamente
+        {   // Se comprueba que se inicialice correctamente
             printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
             exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
         }
