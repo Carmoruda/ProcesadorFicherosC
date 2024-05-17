@@ -26,4 +26,4 @@ done < fp.conf
 
 
 
-mkdir $father_dir && eval "mkdir $father_dir/$suc_dir"
+eval "mkdir -p $father_dir/$suc_dir" 2> /dev/null
