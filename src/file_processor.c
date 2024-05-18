@@ -26,6 +26,7 @@ DIR *folder_SUC; // Directorio de archivos de la sucursal.
 /// sucursales
 typedef struct sucursal_file
 {
+  char file_path[100];  // Ruta del fichero
   char file_name[100];  // Nombre del fichero
   char sucursal_number; // Número de la sucursal
   int num_operations;   // Número de operaciones realizadas
@@ -52,10 +53,11 @@ void readConfigFile(FILE *pf_config);
 void *reader();
 
 /// @brief Crea un nuevo archivo de una sucursal
+/// @param file_path Ruta del archivo
 /// @param file_name Nombre del archivo
 /// @param sucursal_number Número de la sucursal
 /// @return Puntero al archivo de la sucursal
-sucursal_file *newFile(char *file_name, char sucursal_number);
+sucursal_file *newFile(char *file_path, char *file_name, char sucursal_number);
 
 /// @brief Procesa los ficheros de las sucursales y los escribe en los ficheros
 /// de log y consolidado
@@ -217,10 +219,11 @@ void readConfigFile(FILE *pf_config)
   }
 }
 
-sucursal_file *newFile(char *file_name, char sucursal_number)
+sucursal_file *newFile(char *file_path, char *file_name, char sucursal_number)
 {
   sucursal_file *nueva_sucursal = (sucursal_file *)malloc(sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
 
+  strcpy(nueva_sucursal->file_path, file_path);      // Copiamos el nombre del fichero
   strcpy(nueva_sucursal->file_name, file_name);      // Copiamos el nombre del fichero
   nueva_sucursal->sucursal_number = sucursal_number; // Copiamos el número de la sucursal
   nueva_sucursal->num_operations = 0;                // Inicializamos el número de operaciones
@@ -245,26 +248,20 @@ void *reader(void *file)
 
 void processFiles(sucursal_file *file)
 {
-  char line[256];                               // Línea del fichero
-  time_t time_date = time(NULL);                // Dato de tiempo
-  char control;                                 // Control de lectura
-  char *logString = malloc(600 * sizeof(char)); // Mensaje a escribir en el log
-  char *screenString =
-      malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
+  char line[256];                                  // Línea del fichero
+  time_t time_date = time(NULL);                   // Dato de tiempo
+  char control;                                    // Control de lectura
+  char *logString = malloc(600 * sizeof(char));    // Mensaje a escribir en el log
+  char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
 
-  char dataPath[100];
-  char newDataPath[100] = "../processed/";
-  strcpy(dataPath, config_file.path_files);
-  strcat(dataPath, "/");
+  char newDataPath[100] = "../files_data/processed/";
 
-  FILE *sucursal_file = fopen(strcat(dataPath, file->file_name),
-                              "r"); // Archivo sucursal a procesar
-  FILE *consolidated_file =
-      fopen(config_file.inventory_file, "a"); // Archivo consolidado
+  FILE *sucursal_file = fopen(file->file_path, "r");                // Archivo sucursal a procesar
+  FILE *consolidated_file = fopen(config_file.inventory_file, "a"); // Archivo consolidado
 
   if (sucursal_file == NULL)
   {
-    sprintf(logString, SUCURSAL_ERROR, file->file_name);
+    sprintf(logString, SUCURSAL_ERROR, file->file_path);
     printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
     return;
   }
@@ -297,10 +294,10 @@ void processFiles(sucursal_file *file)
   sprintf(logString, "%d/%d/%d:::%d:%d:%d:::%s:::%d", current_time.tm_mday,
           current_time.tm_mon + 1, current_time.tm_year + 1900,
           current_time.tm_hour, current_time.tm_min, current_time.tm_sec,
-          file->file_name, file->num_operations);
+          file->file_path, file->num_operations);
   sprintf(screenString,
           "Fichero procesado: %s, con %d operaciones consolidadas",
-          file->file_name, file->num_operations);
+          file->file_path, file->num_operations);
 
   printLogScreen(mutexLogFile, config_file.log_file, logString,
                  screenString); // Imprimir en el log
@@ -309,7 +306,7 @@ void processFiles(sucursal_file *file)
   fclose(consolidated_file);
 
   rename(
-      dataPath,
+      file->file_path,
       strcat(newDataPath,
              file->file_name)); // Mover el archivo a la carpeta de procesados
   pthread_mutex_unlock(&mutex); // Desbloquear el mutex
@@ -506,7 +503,7 @@ void *processSucursalDirectory(void *folder_name)
       if (directorio->d_type == DT_REG) // Comprobar que sea un archivo
       {
         sprintf(filePath, "%s%s", folder_name, directorio->d_name);
-        nueva_sucursal = newFile(filePath, filePath[19]); // Añadimos un archivo de la sucursal 1 a la lista
+        nueva_sucursal = newFile(filePath, directorio->d_name, filePath[19]); // Añadimos un archivo de la sucursal 1 a la lista
         sem_wait(&sem_thread_creation);
         pthread_create(&th, NULL, reader, nueva_sucursal); // Crear hilo 1
         sem_post(&sem_thread_creation);
