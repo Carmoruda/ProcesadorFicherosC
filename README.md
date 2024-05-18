@@ -7,6 +7,7 @@ Nombre del proyecto/
 ├── conf/
 │   └──fp.conf
 ├── file_data/
+│   ├── processed/
 │   ├── SUC001/
 │   │   └── SU001_OPE001_DDMMAAAA_No.data
 │   ├── SU002/
@@ -23,7 +24,6 @@ Nombre del proyecto/
 ├── output/
 │   ├── fich_log.log
 │   └── fich_consolidado.csv
-├── processed/
 ├── src/
 │   ├── check_patterns.c
 │   ├── create_structure.sh

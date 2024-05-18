@@ -53,3 +53,4 @@ dkms.conf
 
 # Bank files
 output/
+files_data/

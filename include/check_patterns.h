@@ -9,12 +9,14 @@
 #include <semaphore.h>
 #include "./error_messages.h"
 #include "./show_information.h"
+#include "./program_data.h"
 
 /// @brief Gestiona la lógica de comprobar patrones
 /// @return 0 si todo ha ido bien, -1 si ha habido un error
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file);
 
-struct Operacion {
+struct Operacion
+{
     char IdOperacion[20];
     char FECHA_INICIO[20];
     char FECHA_FIN[20];
