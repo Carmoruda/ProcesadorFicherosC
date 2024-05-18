@@ -65,9 +65,10 @@ sucursal_file *newFile(char *file_path, char *file_name, char sucursal_number);
 void processFiles(sucursal_file *file);
 
 /// @brief Verifica la llegada de nuevos archivos al directorio común
-void *verifyNewFile();
+/// @param file_dir Directorio del que queremos verificar la llegada de nuevos archivos
+void *verifyNewFile(void *file_dir);
 
-/// @brief
+/// @brief Controla la logica detrás del procesado de directorios de sucursales.
 int processFilesProcess();
 
 /// @brief Procesa los ficheros de un directorio concreto
@@ -148,7 +149,7 @@ void StartAudit()
   if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
   {
     printf("SOY EL HIJO\n");
-    checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
+    // checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
   }
 }
 
@@ -312,7 +313,7 @@ void processFiles(sucursal_file *file)
   pthread_mutex_unlock(&mutex); // Desbloquear el mutex
 }
 
-void *verifyNewFile()
+void *verifyNewFile(void *file_dir)
 {
   char *logString; // Mensaje a escribir en el log
   int fileDescriptor, watchDescriptor;
@@ -323,19 +324,17 @@ void *verifyNewFile()
 
   if (fileDescriptor < 0)
   { // Se comprueba que se inicialice el descriptor
-    printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
-    exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con
-                        // error
+    printLogScreen(mutexLogFile, file_dir, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
+    exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
   }
 
   // Se establece el directorio a monitorear
-  watchDescriptor = inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
+  watchDescriptor = inotify_add_watch(fileDescriptor, file_dir, IN_CREATE);
 
   if (watchDescriptor < 0)
   { // Se comprueba que se inicialice el watcher
-    printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
-    exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con
-                        // error
+    printLogScreen(mutexLogFile, file_dir, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
+    exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
   }
 
   // Se queda a la espera de eventos
@@ -349,9 +348,8 @@ void *verifyNewFile()
 
     if (length < 0)
     { // Se comprueba que se inicialice correctamente
-      printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
-      exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso
-                          // con error
+      printLogScreen(mutexLogFile, file_dir, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
+      exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
 
     // Se procesan los eventos
@@ -359,42 +357,32 @@ void *verifyNewFile()
     {
       char *newNotificationScreen =
           "\n\n\n"
-          "###               ###   ############   ###                          "
-          " ###\n"
-          "### ###           ###   ############    ###                         "
-          "###\n"
-          "###   ###         ###   ###              ###                       "
-          "###\n"
-          "###     ###       ###   ############      ###                     "
-          "###\n"
-          "###       ###     ###   ############       ###        ###        "
-          "###\n"
-          "###         ###   ###   ###                 ###     ### ###     "
-          "###\n"
+          "###               ###   ############   ###                           ###\n"
+          "### ###           ###   ############    ###                         ###\n"
+          "###   ###         ###   ###              ###                       ###\n"
+          "###     ###       ###   ############      ###                     ###\n"
+          "###       ###     ###   ############       ###        ###        ###\n"
+          "###         ###   ###   ###                 ###     ### ###     ###\n"
           "###           ### ###   ############         ### ###       ### ###\n"
           "###               ###   ############          ###            ###\n"
           "\n\n\n";
 
       char newNotificationLog[600];
       struct tm current_time = *localtime(&time_date); // Fecha y hora actual
+
       sprintf(newNotificationLog,
               "%d/%d/%d:::%d:%d:%d:::NUEVO FICHERO EN EL DIRECTORIO",
               current_time.tm_mday, current_time.tm_mon + 1,
               current_time.tm_year + 1900, current_time.tm_hour,
               current_time.tm_min, current_time.tm_sec);
 
-      struct inotify_event *event =
-          (struct inotify_event
-               *)&buffer[i]; // Se interpreta los datos del buffer como eventos
+      struct inotify_event *event = (struct inotify_event *)&buffer[i]; // Se interpreta los datos del buffer como eventos
 
-      if (event->mask &
-          IN_CREATE) // Se comprueba si se ha creado un nuevo archivo
+      if (event->mask & IN_CREATE) // Se comprueba si se ha creado un nuevo archivo
       {
-        printLogScreen(mutexLogFile, config_file.log_file, newNotificationLog,
-                       newNotificationScreen); // Imprimir en el log
-        closedir(folder);                      // Cerrar el directorio
-        folder =
-            opendir(config_file.path_files); // Abrir el directorio de nuevo
+        printLogScreen(mutexLogFile, config_file.log_file, newNotificationLog, newNotificationScreen); // Imprimir en el log
+        closedir(folder);                                                                              // Cerrar el directorio
+        folder = opendir(config_file.path_files);                                                      // Abrir el directorio de nuevo
       }
 
       i += EVENT_SIZE + event->len; // Se actualiza el tamaño
@@ -413,10 +401,14 @@ int processFilesProcess()
   char *suc_3_dir_name = malloc(200 * sizeof(char));
   char *suc_4_dir_name = malloc(200 * sizeof(char));
 
+  sprintf(suc_1_dir_name, "%s/%s1/", config_file.path_files, config_file.suc_dir);
+  sprintf(suc_2_dir_name, "%s/%s2/", config_file.path_files, config_file.suc_dir);
+  sprintf(suc_3_dir_name, "%s/%s3/", config_file.path_files, config_file.suc_dir);
+  sprintf(suc_4_dir_name, "%s/%s4/", config_file.path_files, config_file.suc_dir);
+
   // Strings imprimir
-  char *logString = malloc(600 * sizeof(char)); // Mensaje a mostrar en el log
-  char *screenString =
-      malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
+  char *logString = malloc(600 * sizeof(char));    // Mensaje a mostrar en el log
+  char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
 
   // Inicializamos las variables de condición y mutex
   pthread_cond_init(&cond, NULL);
@@ -430,36 +422,35 @@ int processFilesProcess()
   time_t time_date = time(NULL);                   // Dato de tiempo
   struct tm current_time = *localtime(&time_date); // Fecha y hora actual
 
-  sprintf(
-      logString,
-      "%d/%d/%d:::%d:%d:%d:::PROCESAMIENTO ARCHIVOS INICIADO:::DIRECTORIO %s",
-      current_time.tm_mday, current_time.tm_mon + 1,
-      current_time.tm_year + 1900, current_time.tm_hour, current_time.tm_min,
-      current_time.tm_sec, config_file.path_files);
+  sprintf(logString,
+          "%d/%d/%d:::%d:%d:%d:::PROCESAMIENTO ARCHIVOS INICIADO:::DIRECTORIO %s",
+          current_time.tm_mday, current_time.tm_mon + 1,
+          current_time.tm_year + 1900, current_time.tm_hour, current_time.tm_min,
+          current_time.tm_sec, config_file.path_files);
+
   sprintf(screenString,
           "Procesamiento de archivos iniciado en el directorio: %s",
           config_file.path_files);
+
   printLogScreen(mutexLogFile, config_file.log_file, logString, screenString);
 
   // Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
-  pthread_t newFileThread;
+  pthread_t newFileThread_SUC1, newFileThread_SUC2, newFileThread_SUC3, newFileThread_SUC4;
 
-  int controler;
-  controler = pthread_create(&newFileThread, NULL, verifyNewFile, NULL);
+  int controler_SUC1, controler_SUC2, controler_SUC3, controler_SUC4;
 
-  if (controler < 0)
+  controler_SUC1 = pthread_create(&newFileThread_SUC1, NULL, verifyNewFile, suc_1_dir_name);
+  controler_SUC2 = pthread_create(&newFileThread_SUC2, NULL, verifyNewFile, suc_2_dir_name);
+  controler_SUC3 = pthread_create(&newFileThread_SUC3, NULL, verifyNewFile, suc_3_dir_name);
+  controler_SUC4 = pthread_create(&newFileThread_SUC4, NULL, verifyNewFile, suc_4_dir_name);
+
+  if (controler_SUC1 < 0 || controler_SUC2 < 0 || controler_SUC3 < 0 || controler_SUC4 < 0)
   {
-    printLogScreen(mutexLogFile, config_file.log_file, VERIFIER_THREAD_ERROR,
-                   VERIFIER_THREAD_ERROR);
+    printLogScreen(mutexLogFile, config_file.log_file, VERIFIER_THREAD_ERROR, VERIFIER_THREAD_ERROR);
   }
 
   // Se inicializa un semáforo para sincronizar el procesado de archivos
   sem_init(&sem_thread_creation, 0, config_file.num_processes);
-
-  sprintf(suc_1_dir_name, "%s/%s%d/", config_file.path_files, config_file.suc_dir, 1);
-  sprintf(suc_2_dir_name, "%s/%s%d/", config_file.path_files, config_file.suc_dir, 2);
-  sprintf(suc_3_dir_name, "%s/%s%d/", config_file.path_files, config_file.suc_dir, 3);
-  sprintf(suc_4_dir_name, "%s/%s%d/", config_file.path_files, config_file.suc_dir, 4);
 
   pthread_create(&th1, NULL, processSucursalDirectory, suc_1_dir_name); // Crear hilo sucursal 1
   pthread_create(&th2, NULL, processSucursalDirectory, suc_2_dir_name); // Crear hilo sucursal 2
@@ -470,6 +461,11 @@ int processFilesProcess()
   pthread_join(th2, NULL);
   pthread_join(th3, NULL);
   pthread_join(th4, NULL);
+
+  pthread_join(newFileThread_SUC1, NULL);
+  pthread_join(newFileThread_SUC2, NULL);
+  pthread_join(newFileThread_SUC3, NULL);
+  pthread_join(newFileThread_SUC4, NULL);
 
   return 0;
 }
