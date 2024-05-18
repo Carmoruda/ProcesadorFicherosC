@@ -41,7 +41,8 @@ while getopts ":l:s:t:u:h" opt; do
 done
 
 if [ ${type_operation//[^0-9]/} -gt 4 ]; then
-  type_operation=$((type_operation / 4))
+  type_operation=$((type_operation / 4 + 1))
+  type_operation=$(printf "OPE%03d" "$type_operation")
 fi
 
 
