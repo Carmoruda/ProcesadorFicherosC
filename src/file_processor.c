@@ -19,15 +19,16 @@ pthread_mutex_t mutex;        // Mutex para la exclusión mutua
 pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
 sem_t sem_thread_creation;    // Semáforo para controlar la creación de hilos
 
-DIR *folder; // Directorio de archivos de las sucursales
+DIR *folder;     // Directorio raíz de archivos de las sucursales
+DIR *folder_SUC; // Directorio de archivos de la sucursal.
 
 /// @brief Estructura que contiene la información de los archivos de las
 /// sucursales
 typedef struct sucursal_file
 {
-  char file_name[100]; // Nombre del fichero
-  int sucursal_number; // Número de la sucursal
-  int num_operations;  // Número de operaciones realizadas
+  char file_name[100];  // Nombre del fichero
+  char sucursal_number; // Número de la sucursal
+  int num_operations;   // Número de operaciones realizadas
 } sucursal_file;
 
 /// @brief Estructura que contiene la información del archivo de configuración
@@ -54,7 +55,7 @@ void *reader();
 /// @param file_name Nombre del archivo
 /// @param sucursal_number Número de la sucursal
 /// @return Puntero al archivo de la sucursal
-sucursal_file *newFile(char *file_name, int sucursal_number);
+sucursal_file *newFile(char *file_name, char sucursal_number);
 
 /// @brief Procesa los ficheros de las sucursales y los escribe en los ficheros
 /// de log y consolidado
@@ -65,6 +66,7 @@ void processFiles(sucursal_file *file);
 void *verifyNewFile();
 
 int processFilesProcess();
+void *processSucursalDirectory(void *folder_name);
 
 /// @brief Muestra el menú de inicio del programa
 /// @param error_flag flag de error en la opción del usuario
@@ -139,7 +141,7 @@ void StartAudit()
 
   if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
   {
-    printf("SOY EL HIJO");
+    printf("SOY EL HIJO\n");
     checkPatternsProcess(mutexLogFile, config_file.log_file,
                          config_file.inventory_file);
   }
@@ -212,16 +214,13 @@ void readConfigFile(FILE *pf_config)
   }
 }
 
-sucursal_file *newFile(char *file_name, int sucursal_number)
+sucursal_file *newFile(char *file_name, char sucursal_number)
 {
-  sucursal_file *nueva_sucursal = (sucursal_file *)malloc(
-      sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
+  sucursal_file *nueva_sucursal = (sucursal_file *)malloc(sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
 
-  strcpy(nueva_sucursal->file_name,
-         file_name); // Copiamos el nombre del fichero
-  nueva_sucursal->sucursal_number =
-      sucursal_number;                // Copiamos el número de la sucursal
-  nueva_sucursal->num_operations = 0; // Inicializamos el número de operaciones
+  strcpy(nueva_sucursal->file_name, file_name);      // Copiamos el nombre del fichero
+  nueva_sucursal->sucursal_number = sucursal_number; // Copiamos el número de la sucursal
+  nueva_sucursal->num_operations = 0;                // Inicializamos el número de operaciones
 
   // Avisamos a los hilos que deben comprar si hay un nuevo archivo
   pthread_cond_signal(&cond);
@@ -288,7 +287,7 @@ void processFiles(sucursal_file *file)
 
   while (fgets(line, sizeof(line), sucursal_file))
   {
-    fprintf(consolidated_file, "%d;%s", file->sucursal_number,
+    fprintf(consolidated_file, "%c;%s", file->sucursal_number,
             line);          // Escribir en el fichero consolidado
     file->num_operations++; // Incrementar el número de operaciones
   }
@@ -414,10 +413,10 @@ int processFilesProcess()
   sucursal_file *nueva_sucursal;
 
   // Path a los archivos
-  char dataPath[100];
-  strcpy(dataPath, config_file.path_files);
-  strcat(dataPath, "/");
-  struct dirent *directorio = malloc(sizeof(struct dirent));
+  char *suc_1_dir_name = malloc(200 * sizeof(char));
+  char *suc_2_dir_name = malloc(200 * sizeof(char));
+  char *suc_3_dir_name = malloc(200 * sizeof(char));
+  char *suc_4_dir_name = malloc(200 * sizeof(char));
 
   // Strings imprimir
   char *logString = malloc(600 * sizeof(char)); // Mensaje a mostrar en el log
@@ -431,6 +430,7 @@ int processFilesProcess()
 
   // Inicializar hilos
   pthread_t th1, th2, th3, th4;
+
   // Mostrar path ficheros
   time_t time_date = time(NULL);                   // Dato de tiempo
   struct tm current_time = *localtime(&time_date); // Fecha y hora actual
@@ -461,66 +461,63 @@ int processFilesProcess()
   // Se inicializa un semáforo para sincronizar el procesado de archivos
   sem_init(&sem_thread_creation, 0, config_file.num_processes);
 
-  folder = opendir(config_file.path_files);
+  sprintf(suc_1_dir_name, "%s/%s%d/", config_file.path_files, config_file.suc_dir, 1);
+  sprintf(suc_2_dir_name, "%s/%s%d/", config_file.path_files, config_file.suc_dir, 2);
+  sprintf(suc_3_dir_name, "%s/%s%d/", config_file.path_files, config_file.suc_dir, 3);
+  sprintf(suc_4_dir_name, "%s/%s%d/", config_file.path_files, config_file.suc_dir, 4);
+
+  pthread_create(&th1, NULL, processSucursalDirectory, suc_1_dir_name); // Crear hilo sucursal 1
+  pthread_create(&th2, NULL, processSucursalDirectory, suc_2_dir_name); // Crear hilo sucursal 2
+  pthread_create(&th3, NULL, processSucursalDirectory, suc_3_dir_name); // Crear hilo sucursal 3
+  pthread_create(&th4, NULL, processSucursalDirectory, suc_4_dir_name); // Crear hilo sucursal 4
+
+  pthread_join(th1, NULL);
+  pthread_join(th2, NULL);
+  pthread_join(th3, NULL);
+  pthread_join(th4, NULL);
+
+  return 0;
+}
+
+void *processSucursalDirectory(void *folder_name)
+{
+  // Inicializar hilo
+  pthread_t th;
+
+  // Strings imprimir
+  char *logString = malloc(600 * sizeof(char));    // Mensaje a mostrar en el log
+  char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
+
+  char filePath[100];
+  struct dirent *directorio = malloc(sizeof(struct dirent));
+  sucursal_file *nueva_sucursal = (sucursal_file *)malloc(sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
+
+  folder = opendir(folder_name);
 
   if (folder == NULL)
   {
     sprintf(logString, FOLDER_OPEN_ERROR, folder);
     printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
-    return -1;
   }
 
   while (1)
   {
     while ((directorio = readdir(folder)) != NULL)
     {
+
       if (directorio->d_type == DT_REG) // Comprobar que sea un archivo
       {
-        switch (directorio->d_name[4])
-        {
-        case '1':
-          nueva_sucursal =
-              newFile(directorio->d_name,
-                      1); // Añadimos un archivo de la sucursal 1 a la lista
-          sem_wait(&sem_thread_creation);
-          pthread_create(&th1, NULL, reader, nueva_sucursal); // Crear hilo 1
-          sem_post(&sem_thread_creation);
-          break;
-        case '2':
-          nueva_sucursal =
-              newFile(directorio->d_name,
-                      2); // Añadimos un archivo de la sucursal 2 a la lista
-          sem_wait(&sem_thread_creation);
-          pthread_create(&th2, NULL, reader, nueva_sucursal); // Crear hilo 2
-          sem_post(&sem_thread_creation);
-          break;
-        case '3':
-          nueva_sucursal =
-              newFile(directorio->d_name,
-                      3); // Añadimos un archivo de la sucursal 3 a la lista
-          sem_wait(&sem_thread_creation);
-          pthread_create(&th3, NULL, reader, nueva_sucursal); // Crear hilo 3
-          sem_post(&sem_thread_creation);
-          break;
-        case '4':
-          nueva_sucursal =
-              newFile(directorio->d_name,
-                      4); // Añadimos un archivo de la sucursal 4 a la lista
-          sem_wait(&sem_thread_creation);
-          pthread_create(&th4, NULL, reader, nueva_sucursal); // Crear hilo 4
-          sem_post(&sem_thread_creation);
-          break;
-        default:
-          break;
-        }
-
-        strcpy(dataPath, config_file.path_files);
-        strcat(dataPath, "/");
+        sprintf(filePath, "%s%s", folder_name, directorio->d_name);
+        nueva_sucursal = newFile(filePath, filePath[19]); // Añadimos un archivo de la sucursal 1 a la lista
+        sem_wait(&sem_thread_creation);
+        pthread_create(&th, NULL, reader, nueva_sucursal); // Crear hilo 1
+        sem_post(&sem_thread_creation);
+        break;
       }
-    }
 
-    sleep(1);
+      pthread_join(th, NULL);
+    }
   }
 
-  return 0;
+  sleep(1);
 }
