@@ -3,11 +3,8 @@
 generateDate() {
   day=$((1 + RANDOM % 28))
   month=$((1 + RANDOM % 12))
-  year=$((2024 + RANDOM % 5))
-  hour=$((RANDOM % 24))
-  minute=$((RANDOM % 60))
-  second=$((RANDOM % 60))
-  printf "%02d%02d%04d%02d%02d%02d" "$day" "$month" "$year" "$hour" "$minute" "$second"
+  year=$((2024 + RANDOM % 4))
+  printf "%02d%02d%04d" "$day" "$month" "$year"
 }
 
 while getopts ":l:s:t:u:h" opt; do
@@ -43,7 +40,7 @@ while getopts ":l:s:t:u:h" opt; do
   esac
 done
 
-if [ $type_operation -gt 4 ]; then
+if [ ${type_operation//[^0-9]/} -gt 4 ]; then
   type_operation=$((type_operation / 4))
 fi
 
@@ -57,7 +54,7 @@ fecha=$(generateDate)
 
 fileNumber=$((RANDOM % 10 + 1))
 
-filename="${sucursal_number}${type_operation}${fecha}_${fileNumber}.data"
+filename="${sucursal_number}_${type_operation}_${fecha}_${fileNumber}.data"
 
 for ((i = 1; i <= "$lines"; i++)); do
   random_state=$((RANDOM % 3))
@@ -72,10 +69,24 @@ for ((i = 1; i <= "$lines"; i++)); do
     1) sign="-" ;;
   esac
 
-operationId=$(printf "COMPRA%02d" $i)
+  operationId=$(printf "COMPRA%02d" $i)
 
 
-echo "$type_operation;$(date '+%d/%m/%Y%H:%M');$(date '+%d/%m/%Y%H:%M:');"USER00"$(($RANDOM % $user_number + 1));$operationId;$((RANDOM % 10));$sign$((RANDOM % 1000)).$(printf "%02d" $((RANDOM % 100)) )€;$state"
-done > "../data/$filename"
+  output="$type_operation;$(date '+%d/%m/%Y%H:%M');$(date '+%d/%m/%Y%H:%M:');"USER00"$(($RANDOM % $user_number + 1));$operationId;$((RANDOM % 10));$sign$((RANDOM % 1000)).$(printf "%02d" $((RANDOM % 100)) )€;$state"
+done
+
+if [ $sucursal_number == "SU001" ]
+then
+  echo $output > "../files_data/SUC001/$filename"
+elif [ $sucursal_number == "SU002" ]
+then
+  echo $output > "../files_data/SUC002/$filename"
+elif [ $sucursal_number == "SU003" ]
+then
+  echo $output > "../files_data/SUC003/$filename"
+elif [ $sucursal_number == "SU004" ]
+then
+  echo $output > "../files_data/SUC004/$filename"
+fi
 
 echo "$filename created"

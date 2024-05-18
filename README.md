@@ -1,5 +1,7 @@
 # Auditor de Procesos
 
+## Instalación y ejecución
+
 ## Estructura de directorios
 
 ```bash

@@ -16,7 +16,7 @@ while true; do
   users=$((RANDOM % 10 + 1))
   echo "$users"
   operation=$((RANDOM % 8 + 1))
-  operation=$(printf "OPE%02d" "$operation")
+  operation=$(printf "OPE%03d" "$operation")
   echo "$operation"
 
   ./generateData -l "$lines" -s "$sucursal" -t "$operation" -u "$users"

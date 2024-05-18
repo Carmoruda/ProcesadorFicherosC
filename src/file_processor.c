@@ -389,6 +389,7 @@ void *verifyNewFile(void *file_dir)
     }
   }
 }
+
 // --- PROCESS FUNCTIONS ---
 
 int processFilesProcess()
