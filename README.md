@@ -4,23 +4,33 @@
 
 ```bash
 Nombre del proyecto/
-├── data/
-│   ├── SU001_OPE001_DDMMAAAA_No.data
-│   ├── SU002_OPE002_DDMMAAAA_No.data
-│   ├── SU003_OPE003_DDMMAAAA_No.data
-│   └── SU004_OPE004_DDMMAAAA_No.data
+├── conf/
+│   └──fp.conf
+├── file_data/
+│   ├── SUC001/
+│   │   └── SU001_OPE001_DDMMAAAA_No.data
+│   ├── SU002/
+│   │   └── SU002_OPE001_DDMMAAAA_No.data
+│   ├── SU003/
+│   │   └── SU003_OPE001_DDMMAAAA_No.data
+│   └── SU004/
+│       └── SU004_OPE001_DDMMAAAA_No.data
 ├── include/
+│   ├── check_patterns.h
 │   ├── error_messages.h
+│   ├── program_data.h
 │   └── show_information.h
 ├── output/
 │   ├── fich_log.log
-│   └── consolidado.csv
+│   └── fich_consolidado.csv
 ├── processed/
 ├── src/
-│   ├── show_information.c
+│   ├── check_patterns.c
+│   ├── create_structure.sh
 │   ├── file_processor.c
 │   ├── file_processor (ejecutable)
-│   └──fp.conf
+│   ├── make
+│   └── show_information.c
 ├── tests/
 │   ├── generateData
 │   └── simulate

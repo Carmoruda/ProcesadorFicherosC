@@ -62,10 +62,14 @@ sucursal_file *newFile(char *file_name, char sucursal_number);
 /// @param file Archivo de la sucursal a procesar
 void processFiles(sucursal_file *file);
 
-/// @brief Verifca la llegada de nuevos archivos al directorio común
+/// @brief Verifica la llegada de nuevos archivos al directorio común
 void *verifyNewFile();
 
+/// @brief
 int processFilesProcess();
+
+/// @brief Procesa los ficheros de un directorio concreto
+/// @param folder_name Nombre del directorio que queremos procesar
 void *processSucursalDirectory(void *folder_name);
 
 /// @brief Muestra el menú de inicio del programa
@@ -142,8 +146,7 @@ void StartAudit()
   if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
   {
     printf("SOY EL HIJO\n");
-    checkPatternsProcess(mutexLogFile, config_file.log_file,
-                         config_file.inventory_file);
+    checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
   }
 }
 
@@ -268,8 +271,7 @@ void processFiles(sucursal_file *file)
 
   if (consolidated_file == NULL)
   {
-    printLogScreen(mutexLogFile, config_file.log_file, CONSOLIDADO_OPEN_ERROR,
-                   CONSOLIDADO_OPEN_ERROR);
+    printLogScreen(mutexLogFile, config_file.log_file, CONSOLIDADO_OPEN_ERROR, CONSOLIDADO_OPEN_ERROR);
     return;
   }
 
@@ -324,20 +326,17 @@ void *verifyNewFile()
 
   if (fileDescriptor < 0)
   { // Se comprueba que se inicialice el descriptor
-    printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR,
-                   INOTIFY_DESCRIPTOR_ERROR);
+    printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
     exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con
                         // error
   }
 
   // Se establece el directorio a monitorear
-  watchDescriptor =
-      inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
+  watchDescriptor = inotify_add_watch(fileDescriptor, config_file.path_files, IN_CREATE);
 
   if (watchDescriptor < 0)
   { // Se comprueba que se inicialice el watcher
-    printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR,
-                   INOTIFY_WATCHER_ERROR);
+    printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
     exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con
                         // error
   }
@@ -353,8 +352,7 @@ void *verifyNewFile()
 
     if (length < 0)
     { // Se comprueba que se inicialice correctamente
-      printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR,
-                     INOTIFY_LENGTH_ERROR);
+      printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
       exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso
                           // con error
     }

@@ -52,6 +52,6 @@ Mkfile.old
 dkms.conf
 
 # Bank files
-data/
+files_data/
 processed/
 output/
