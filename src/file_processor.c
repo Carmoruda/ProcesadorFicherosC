@@ -93,6 +93,7 @@ int main()
     // Leer archivo de configuración
     FILE *file = fopen(CONFIG_PATH, "r");
     readConfigFile(file);
+    fclose(file);
 
     char *args[] = {"./create_structure.sh", NULL};
     bool isProgramRunning = true;
@@ -245,6 +246,8 @@ void *reader(void *file)
 
     processFiles((sucursal_file *)file); // Procesar el archivo
 
+    free(file); // Liberar memoria
+
     pthread_exit(NULL); // Salir del hilo
 }
 
@@ -309,6 +312,9 @@ void processFiles(sucursal_file *file)
 
     rename(file->file_path, strcat(newDataPath, file->file_name)); // Mover el archivo a la carpeta de procesados
     pthread_mutex_unlock(&mutex);                                  // Desbloquear el mutex
+
+    free(logString);
+    free(screenString);
 }
 
 void *verifyNewFile(void *folder_struct)
@@ -482,6 +488,14 @@ int processFilesProcess()
     pthread_join(newFileThread_SUC3, NULL);
     pthread_join(newFileThread_SUC4, NULL);
 
+    free(suc_1_dir);
+    free(suc_2_dir);
+    free(suc_3_dir);
+    free(suc_4_dir);
+
+    free(logString);
+    free(screenString);
+
     return 0;
 }
 
@@ -494,16 +508,20 @@ void *processSucursalDirectory(void *folder_struct)
     char *logString = malloc(600 * sizeof(char));    // Mensaje a mostrar en el log
     char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
 
-    char filePath[100];                                                             // Ruta del fichero
-    struct dirent *directorio = malloc(sizeof(struct dirent));                      // Estructura de directorio
-    sucursal_file *nueva_sucursal = (sucursal_file *)malloc(sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
+    struct dirent *directorio;     // Estructura de directorio
+    sucursal_file *nueva_sucursal; // Reservamos memoria para el nuevo fichero
 
-    ((sucursal_dir *)folder_struct)->folder = opendir(((sucursal_dir *)folder_struct)->folder_name); // Abrir el directorio
+    char filePath[100]; // Ruta del fichero
+
+    ((sucursal_dir *)folder_struct)->folder = opendir(((sucursal_dir *)folder_struct)->folder_name);
 
     if (((sucursal_dir *)folder_struct)->folder == NULL) // Error al abrir el directorio
     {
         sprintf(logString, FOLDER_OPEN_ERROR, ((sucursal_dir *)folder_struct)->folder);
         printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
+        free(logString);
+        free(screenString);
+        return NULL;
     }
 
     while (1)
@@ -518,12 +536,15 @@ void *processSucursalDirectory(void *folder_struct)
                 sem_wait(&sem_thread_creation);
                 pthread_create(&th, NULL, reader, nueva_sucursal); // Creamos el hilo para procesar la sucursal
                 sem_post(&sem_thread_creation);
+                pthread_join(th, NULL);
                 break;
             }
-
-            pthread_join(th, NULL);
         }
     }
 
     sleep(1);
+    closedir(((sucursal_dir *)folder_struct)->folder);
+    free(logString);
+    free(screenString);
+    return NULL;
 }
