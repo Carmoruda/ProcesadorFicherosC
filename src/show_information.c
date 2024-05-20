@@ -1,4 +1,5 @@
 #include "../include/show_information.h"
+#include "../include/error_messages.h"
 
 void printLogScreen(pthread_mutex_t mutexLogFile, char logFile[100], char *stringLog, char *stringScreen)
 {
@@ -7,7 +8,7 @@ void printLogScreen(pthread_mutex_t mutexLogFile, char logFile[100], char *strin
 
     if (log_file == NULL)
     {
-        printf("Error al abrir el archivo de log.\n");
+        printf(LOG_OPEN_ERROR);
         return;
     }
 
