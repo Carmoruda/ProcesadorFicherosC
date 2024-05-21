@@ -24,11 +24,13 @@ sem_t sem_thread_creation;    // Semáforo para controlar la creación de hilos
 typedef struct sucursal_info{
   char sucursal_number;
   char line[300];
+  int flag;
 }sucursal_info;
 
 typedef struct {
   size_t mcSize;
   size_t usedSize;
+  int filesCount;
   sucursal_info files[];
 }shared_memory;
 
@@ -80,7 +82,7 @@ sucursal_file *newFile(char *file_path, char *file_name, char sucursal_number);
 /// @brief Procesa los ficheros de las sucursales y los escribe en los ficheros
 /// de log y consolidado
 /// @param file Archivo de la sucursal a procesar
-void processFiles(sucursal_file *file);
+void processFiles(sucursal_file *file, shared_memory *sharedMemory_ptr);
 
 /// @brief Verifica la llegada de nuevos archivos al directorio común
 /// @param folder_struct Directorio del que queremos verificar la llegada de nuevos archivos
@@ -115,6 +117,16 @@ int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedM
 /// @return 0 si éxito, -1 error
 int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **sharedMemory_ptr);
 
+/// @brief Añade información a la memoria compartida
+/// @param sharedMemory_ptr Puntero a la memoria compartida
+/// @param sucInfo Fichero a añadir a la memoria comapartida
+void addDataSharedMemory(shared_memory *sharedMemory_ptr, sucursal_info sucInfo);
+
+
+//Variables memoria compartida
+int IDSharedMemory;
+shared_memory *SharedMemory_ptr;
+
 int main()
 {
     // Leer archivo de configuración
@@ -124,6 +136,13 @@ int main()
 
     char *args[] = {"./create_structure.sh", NULL};
     bool isProgramRunning = true;
+
+
+
+    if(CreateSharedMemory(config_file.size_fp, &IDSharedMemory, &SharedMemory_ptr) == -1){
+        printf("Error al crear la memoria virtual.");
+        return EXIT_FAILURE;
+    }
 
     do
     {
@@ -167,6 +186,24 @@ int main()
     return 0;
 }
 
+void StartAudit()
+{
+    // Proceso comprobar patrones
+    pid_t proceso_patrones;
+
+    proceso_patrones = fork();
+    if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
+    {
+        processFilesProcess();
+    }
+
+    if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
+    {
+        printf("SOY EL HIJO\n");
+        checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
+    }
+}
+
 int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr){
   //Se crea la key
   __key_t smkey = ftok("../output/fich_consolidado.csv", 7);
@@ -188,10 +225,12 @@ int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedM
   }
   //Se incializa la memoria de la MC
   (*sharedMemory_ptr)->mcSize = size;
+  (*sharedMemory_ptr)->filesCount = 0;
   (*sharedMemory_ptr)->usedSize = 0;
 
   return 0;
 }
+
 
 int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **sharedMemory_ptr){
   //Guardo el tamaño usado anteriormente
@@ -215,26 +254,45 @@ int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **shar
   }
   //Se incializa la memoria de la MC
   (*sharedMemory_ptr)->mcSize = newSize;
+  (*sharedMemory_ptr)->filesCount = 0;
   (*sharedMemory_ptr)->usedSize = prevUsedSize;
   return 0;
 }
 
-void StartAudit()
-{
-    // Proceso comprobar patrones
-    pid_t proceso_patrones;
+void AddDataSharedMemory(shared_memory *sharedMemory_ptr, sucursal_info sucInfo){
+    bool isMemoryFull = false;
+    do{
+        if(sharedMemory_ptr->usedSize + sizeof(sucInfo) > sharedMemory_ptr->mcSize){
+        ResizeSharedMemory(0, sizeof(sucInfo), &sharedMemory_ptr);
+        isMemoryFull = true;
+        }
+        else{
+            isMemoryFull = false;
+        }
+    }while(!isMemoryFull);
+    sharedMemory_ptr->files[sharedMemory_ptr->filesCount] = sucInfo;
+    sharedMemory_ptr->usedSize += sizeof(sucInfo);
+    sharedMemory_ptr->filesCount++;
+}
 
-    proceso_patrones = fork();
-    if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
-    {
-        processFilesProcess();
+void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *ConsolidatedPath) {
+    FILE *consolidated_ptr = fopen(ConsolidatedPath, "a");
+
+    if (consolidated_ptr == NULL) {
+        perror("Error al abrir el archivo consolidado");
+        return;
     }
 
-    if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
-    {
-        printf("SOY EL HIJO\n");
-        checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
+    pthread_mutex_lock(&mutex); // Bloquear el mutex
+
+    for (size_t i = 0; i < sharedMemory_ptr->filesCount; i++) {
+        sucursal_info sucInfo = sharedMemory_ptr->files[i];
+        fprintf(consolidated_ptr, "%c;%s;%d\n", sucInfo.sucursal_number, sucInfo.line, sucInfo.flag);
     }
+
+    pthread_mutex_unlock(&mutex); // Desbloquear el mutex
+
+    fclose(consolidated_ptr);
 }
 
 int Menu(int error_flag)
@@ -323,14 +381,14 @@ void *reader(void *file)
     srand(time(NULL));
     sleep(rand() % config_file.simulate_sleep_max + config_file.simulate_sleep_min);
 
-    processFiles((sucursal_file *)file); // Procesar el archivo
+    processFiles((sucursal_file *)file, SharedMemory_ptr); // Procesar el archivo
 
     free(file); // Liberar memoria
 
     pthread_exit(NULL); // Salir del hilo
 }
 
-void processFiles(sucursal_file *file)
+void processFiles(sucursal_file *file, shared_memory *sharedMemory_ptr)
 {
     char line[256];                                  // Línea del fichero
     time_t time_date = time(NULL);                   // Dato de tiempo
@@ -366,11 +424,21 @@ void processFiles(sucursal_file *file)
     int flag = 0;                                    // Flag para los patrones de actividades irregulares
 
     // Bucle que leerá el fichero de la sucursal hasta que no haya más información y la escribirá en el fichero consolidado
-    while (fgets(line, sizeof(line), sucursal_file))
+
+    // ****A METER A FICHERO CONSOLIDADO. COMENTADO PARA METERLO EN MC
+    /*while (fgets(line, sizeof(line), sucursal_file))
     {
         line[strcspn(line, "\n")] = '\0';                                            // Elimina el salto de línea
         fprintf(consolidated_file, "%c;%s;%d\n", file->sucursal_number, line, flag); // Escribir en el fichero consolidado
         file->num_operations++;                                                      // Incrementar el número de operaciones
+    }*/
+    //Se agrega la línea de los ficheros a la memoria virtual
+    while (fgets(line, sizeof(line), sucursal_file)) {
+        line[strcspn(line, "\n")] = '\0'; // Elimina el salto de línea
+        sucursal_info sucInfo = {file->sucursal_number, "", flag};
+        strncpy(sucInfo.line, line, sizeof(sucInfo.line));
+        AddDataSharedMemory(sharedMemory_ptr, sucInfo);
+        file->num_operations++;
     }
 
     // String que imprimiremos en el log
