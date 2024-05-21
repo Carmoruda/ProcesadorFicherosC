@@ -70,6 +70,7 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
     pthread_join(th_pattern3, NULL);
     pthread_join(th_pattern4, NULL);
     pthread_join(th_pattern5, NULL);
+
     return 0;
 }
 
@@ -77,13 +78,14 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
 void *pattern1(void *arg)
 {
-
     int contadorOperaciones = 0;
     char ultimoUsuario[100];
+    strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
+    strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
     bool cumpleCondicion = false;
 
-    for (int i = 0; i < num_registros; i++)
+    for (int i = 1; i < num_registros; i++)
     {
 
         // Verificar si es la misma persona y si la operación está dentro del rango
@@ -144,13 +146,14 @@ void *pattern1(void *arg)
 
 void *pattern2(void *arg)
 {
-
     int contadorOperaciones = 0;
-    char ultimoUsuario[20];
-    char ultimoTiempo[20];
+    char ultimoUsuario[100];
+    strcpy(ultimoUsuario, registros[0].IdUsuario);
+    char ultimoTiempo[100];
+    strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
     bool cumpleCondicion = false;
 
-    for (int i = 0; i < num_registros; i++)
+    for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un día
@@ -206,13 +209,14 @@ void *pattern2(void *arg)
 
 void *pattern3(void *arg)
 {
-
     int contadorOperaciones = 0;
-    char ultimoUsuario[20];
-    char ultimoTiempo[20];
+    char ultimoUsuario[100];
+    strcpy(ultimoUsuario, registros[0].IdUsuario);
+    char ultimoTiempo[100];
+    strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
     bool cumpleCondicion = false;
 
-    for (int i = 0; i < num_registros; i++)
+    for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora
@@ -268,7 +272,6 @@ void *pattern3(void *arg)
 
 void *pattern4(void *arg)
 {
-
     struct Operacion *Usuarios = NULL; // Vector de estructuras dinámico
     int tamanoInicial = 100;           // Tamaño inicial del vector (puedes ajustarlo según tus necesidades)
     Usuarios = (struct Operacion *)malloc(tamanoInicial * sizeof(struct Operacion));
@@ -370,14 +373,18 @@ void *pattern4(void *arg)
     pthread_exit(NULL);
 }
 
+/// --- Pattern 5 ---
+
 void *pattern5(void *arg)
 {
-
+    printf("Check patron 5");
     int contadorOperaciones = 0;
-    char ultimoUsuario[20];
-    char ultimoTiempo[20];
+    char ultimoUsuario[100];
+    strcpy(ultimoUsuario, registros[0].IdUsuario);
+    char ultimoTiempo[100];
+    strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
 
-    for (int i = 0; i < num_registros; i++)
+    for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora
@@ -415,7 +422,6 @@ void *pattern5(void *arg)
 
 int readConsolidatedFile()
 {
-
     int num_registros = 0;
     char archive[200] = "../output/fich_consolidado.csv";
 
@@ -436,7 +442,6 @@ int readConsolidatedFile()
     while (fgets(linea, sizeof(linea), archivo) != NULL &&
            num_registros < MAX_RECORDS)
     {
-
         sscanf(linea, "%d;%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;];%d",
                &registros[num_registros].Sucursal,
                registros[num_registros].IdOperacion,
@@ -451,16 +456,19 @@ int readConsolidatedFile()
         registros[num_registros].DineroRet = 0;
         num_registros++;
     }
+
     // Cerrar el archivo
     fclose(archivo);
 
     // Desbloquear el mutex después de acceder al archivo
     // pthread_mutex_unlock(&mutexPatterns);
 
-    // Ordenar el vector por fecha de inicio y usuario
-    qsort(registros, num_registros, sizeof(struct Operacion),
-          comparar_por_fecha_inicio);
-    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    if (num_registros > 1)
+    {
+        // Ordenar el vector por fecha de inicio y usuario
+        qsort(registros, num_registros, sizeof(struct Operacion), comparar_por_fecha_inicio);
+        qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    }
 
     return num_registros;
 }
@@ -483,25 +491,42 @@ int comparar_por_fecha_inicio(const void *a, const void *b)
 // Función para verificar si se superan las 5 operaciones por hora
 int enElMismoDía(char *fecha1, char *fecha2)
 {
-    time_t f1, f2, diferencia;
-    f1 = (long)fecha1;
-    f2 = (long)fecha2;
-    diferencia = f1 - f2;
-    unsigned long long int dias = diferencia / 60;
+    int dia1, mes1, anio1, hora1, minuto1;
+    int dia2, mes2, anio2, hora2, minuto2;
 
-    return dias == 0 ? 1 : 0;
+    // Parseamos las fechas
+    sscanf(fecha1, "%2d/%2d/%4d%2d:%2d", &dia1, &mes1, &anio1, &hora1, &minuto1);
+    sscanf(fecha2, "%2d/%2d/%4d%2d:%2d", &dia2, &mes2, &anio2, &hora2, &minuto2);
+
+    // Comparamos día, mes y año
+    if (dia1 == dia2 && mes1 == mes2 && anio1 == anio2)
+    {
+        return 1; // Están en el mismo día
+    }
+    else
+    {
+        return 0; // No están en el mismo día
+    }
 }
 
 // Función para verificar si se superan las 5 operaciones por hora
 int enLaMismaHora(char *fecha1, char *fecha2)
 {
-    time_t f1, f2, diferencia;
-    f1 = (long)fecha1;
-    f2 = (long)fecha2;
-    diferencia = f1 - f2;
-    unsigned long long int horas = diferencia / 60 / 60;
-    diferencia -= 60 * 60 * horas;
-    unsigned long long int minutos = diferencia / 60;
-    diferencia -= 60 * minutos;
-    return diferencia <= 3600 ? 1 : 0;
+    int dia1, mes1, anio1, hora1, minuto1;
+    int dia2, mes2, anio2, hora2, minuto2;
+
+    // Parseamos las fechas
+    sscanf(fecha1, "%2d/%2d/%4d%2d:%2d", &dia1, &mes1, &anio1, &hora1, &minuto1);
+    sscanf(fecha2, "%2d/%2d/%4d%2d:%2d", &dia2, &mes2, &anio2, &hora2, &minuto2);
+
+    // Comparamos día, mes, año y hora
+    if (dia1 == dia2 && mes1 == mes2 && anio1 == anio2 && hora1 == hora2)
+    {
+        return 1; // Están en la misma hora
+    }
+    else
+    {
+
+        return 0; // No están en la misma hora
+    }
 }

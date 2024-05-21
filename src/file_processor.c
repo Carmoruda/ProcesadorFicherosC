@@ -21,16 +21,18 @@ pthread_mutex_t mutex;        // Mutex para la exclusión mutua
 pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
 sem_t sem_thread_creation;    // Semáforo para controlar la creación de hilos
 
-typedef struct sucursal_info{
-  char sucursal_number;
-  char line[300];
-}sucursal_info;
+typedef struct sucursal_info
+{
+    char sucursal_number;
+    char line[300];
+} sucursal_info;
 
-typedef struct {
-  size_t mcSize;
-  size_t usedSize;
-  sucursal_info files[];
-}shared_memory;
+typedef struct
+{
+    size_t mcSize;
+    size_t usedSize;
+    sucursal_info files[];
+} shared_memory;
 
 /// @brief Estructura que contiene la información de los archivos de las
 /// sucursales
@@ -167,56 +169,64 @@ int main()
     return 0;
 }
 
-int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr){
-  //Se crea la key
-  __key_t smkey = ftok("../output/fich_consolidado.csv", 7);
-  if(smkey == -1){
-    printf("Error al generar key MC.");
-    return -1;
-  }
-  //Se crea la zona de memoria compartida
-  *idSharedMemory = shmget(smkey, size, IPC_CREAT | 0666);
-  if(*idSharedMemory == -1){
-    printf("Error al crear la zona de memoria compartida.");
-    return -1;
-  }
-  //Se asigna la memoria compartida
-  *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
-  if(*sharedMemory_ptr == (void *)-1){
-    printf("Error asignando MC.");
-    return -1;
-  }
-  //Se incializa la memoria de la MC
-  (*sharedMemory_ptr)->mcSize = size;
-  (*sharedMemory_ptr)->usedSize = 0;
+int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr)
+{
+    // Se crea la key
+    __key_t smkey = ftok("../output/fich_consolidado.csv", 7);
+    if (smkey == -1)
+    {
+        printf("Error al generar key MC.");
+        return -1;
+    }
+    // Se crea la zona de memoria compartida
+    *idSharedMemory = shmget(smkey, size, IPC_CREAT | 0666);
+    if (*idSharedMemory == -1)
+    {
+        printf("Error al crear la zona de memoria compartida.");
+        return -1;
+    }
+    // Se asigna la memoria compartida
+    *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
+    if (*sharedMemory_ptr == (void *)-1)
+    {
+        printf("Error asignando MC.");
+        return -1;
+    }
+    // Se incializa la memoria de la MC
+    (*sharedMemory_ptr)->mcSize = size;
+    (*sharedMemory_ptr)->usedSize = 0;
 
-  return 0;
+    return 0;
 }
 
-int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **sharedMemory_ptr){
-  //Guardo el tamaño usado anteriormente
-  int prevUsedSize = (*sharedMemory_ptr)->usedSize;
-  //Comprobaciones previas
-  if(shmdt(*sharedMemory_ptr) == -1){
-    printf("Error ResizeMemory al desasociar la memoria.");
-    return -1;
-  }
+int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **sharedMemory_ptr)
+{
+    // Guardo el tamaño usado anteriormente
+    int prevUsedSize = (*sharedMemory_ptr)->usedSize;
+    // Comprobaciones previas
+    if (shmdt(*sharedMemory_ptr) == -1)
+    {
+        printf("Error ResizeMemory al desasociar la memoria.");
+        return -1;
+    }
 
-  *idSharedMemory = shmget(IPC_PRIVATE ,newSize, IPC_CREAT | 0666 );
-    if(*idSharedMemory == -1){
-    printf("Error al crear la zona de memoria compartida ResizeSharedMemory.");
-    return -1;
-  }
-  //Se asigna la memoria compartida
-  *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
-  if(*sharedMemory_ptr == (void *)-1){
-    printf("Error asignando MC ResizeSharedMemory.");
-    return -1;
-  }
-  //Se incializa la memoria de la MC
-  (*sharedMemory_ptr)->mcSize = newSize;
-  (*sharedMemory_ptr)->usedSize = prevUsedSize;
-  return 0;
+    *idSharedMemory = shmget(IPC_PRIVATE, newSize, IPC_CREAT | 0666);
+    if (*idSharedMemory == -1)
+    {
+        printf("Error al crear la zona de memoria compartida ResizeSharedMemory.");
+        return -1;
+    }
+    // Se asigna la memoria compartida
+    *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
+    if (*sharedMemory_ptr == (void *)-1)
+    {
+        printf("Error asignando MC ResizeSharedMemory.");
+        return -1;
+    }
+    // Se incializa la memoria de la MC
+    (*sharedMemory_ptr)->mcSize = newSize;
+    (*sharedMemory_ptr)->usedSize = prevUsedSize;
+    return 0;
 }
 
 void StartAudit()
