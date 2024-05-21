@@ -377,7 +377,6 @@ void *pattern4(void *arg)
 
 void *pattern5(void *arg)
 {
-    printf("Check patron 5");
     int contadorOperaciones = 0;
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
