@@ -2,17 +2,17 @@
 #include "../include/error_messages.h"
 #include "../include/program_data.h"
 #include "../include/show_information.h"
-#include <sys/inotify.h>
-#include <semaphore.h>
-#include <sys/wait.h>
+#include <dirent.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <stdio.h>
+#include <sys/inotify.h>
+#include <sys/wait.h>
 #include <time.h>
+#include <unistd.h>
 
 pthread_cond_t cond;          // Variable de condición de los hilos
 pthread_mutex_t mutex;        // Mutex para la exclusión mutua
@@ -21,33 +21,30 @@ sem_t sem_thread_creation;    // Semáforo para controlar la creación de hilos
 
 /// @brief Estructura que contiene la información de los archivos de las
 /// sucursales
-typedef struct sucursal_file
-{
-    char file_path[100];  // Ruta del fichero
-    char file_name[100];  // Nombre del fichero
-    char sucursal_number; // Número de la sucursal
-    int num_operations;   // Número de operaciones realizadas
+typedef struct sucursal_file {
+  char file_path[100];  // Ruta del fichero
+  char file_name[100];  // Nombre del fichero
+  char sucursal_number; // Número de la sucursal
+  int num_operations;   // Número de operaciones realizadas
 } sucursal_file;
 
 /// @brief Estructura que contiene la información del directorio de una
 /// sucursal
-typedef struct sucursal_dir
-{
-    DIR *folder;           // Directorio de la sucursal
-    char folder_name[100]; // Nombre del directorio
+typedef struct sucursal_dir {
+  DIR *folder;           // Directorio de la sucursal
+  char folder_name[100]; // Nombre del directorio
 } sucursal_dir;
 
 /// @brief Estructura que contiene la información del archivo de configuración
-struct config_file
-{
-    char path_files[100];     // Directorio padre de archivos
-    char suc_dir[100];        // Directorios de archivos de las sucursales
-    char inventory_file[100]; // Fichero consolidado
-    char log_file[100];       // Fichero de log
-    int num_processes;        // Número de procesos
-    int simulate_sleep_max;   // Tiempo máximo de simulación
-    int simulate_sleep_min;   // Tiempo mínimo de simulación
-    int size_fp;              // Tamaño máximo de la memoria compartida
+struct config_file {
+  char path_files[100];     // Directorio padre de archivos
+  char suc_dir[100];        // Directorios de archivos de las sucursales
+  char inventory_file[100]; // Fichero consolidado
+  char log_file[100];       // Fichero de log
+  int num_processes;        // Número de procesos
+  int simulate_sleep_max;   // Tiempo máximo de simulación
+  int simulate_sleep_min;   // Tiempo mínimo de simulación
+  int size_fp;              // Tamaño máximo de la memoria compartida
 } config_file;
 
 /// @brief Leer la información del archivo de configuración
@@ -70,7 +67,8 @@ sucursal_file *newFile(char *file_path, char *file_name, char sucursal_number);
 void processFiles(sucursal_file *file);
 
 /// @brief Verifica la llegada de nuevos archivos al directorio común
-/// @param folder_struct Directorio del que queremos verificar la llegada de nuevos archivos
+/// @param folder_struct Directorio del que queremos verificar la llegada de
+/// nuevos archivos
 void *verifyNewFile(void *folder_struct);
 
 /// @brief Controla la logica detrás del procesado de directorios de sucursales
@@ -88,464 +86,516 @@ int Menu(int error_flag);
 /// @brief Da comienzo a la auditoria
 void StartAudit();
 
-int main()
-{
-    // Leer archivo de configuración
-    FILE *file = fopen(CONFIG_PATH, "r");
-    readConfigFile(file);
-    fclose(file);
+int main() {
+  // Leer archivo de configuración
+  FILE *file = fopen(CONFIG_PATH, "r");
+  readConfigFile(file);
+  fclose(file);
 
-    char *args[] = {"./create_structure.sh", NULL};
-    bool isProgramRunning = true;
+  char *args[] = {"./create_structure.sh", NULL};
+  bool isProgramRunning = true;
 
-    do
-    {
-        switch (Menu(0))
-        {
-        case 1: // Ejecutar script creación estructura directorios
-            pid_t pid = fork();
-            if (pid == -1)
-            {
-                perror(FORK_ERROR);
-                return 1;
-            }
-            else if (pid == 0)
-            {
-                execvp(args[0], args);
-                perror(EXECVP_ERROR);
-                return 1;
-            }
-            else
-            {
-                int status;
-                waitpid(pid, &status, 0);
-            }
-            break;
+  do {
+    switch (Menu(0)) {
+    case 1: // Ejecutar script creación estructura directorios
+      pid_t pid = fork();
+      if (pid == -1) {
+        perror(FORK_ERROR);
+        return 1;
+      } else if (pid == 0) {
+        execvp(args[0], args);
+        perror(EXECVP_ERROR);
+        return 1;
+      } else {
+        int status;
+        waitpid(pid, &status, 0);
+      }
+      break;
 
-        case 2: // Ejecutar programa
-            StartAudit();
-            break;
+    case 2: // Ejecutar programa
+      StartAudit();
+      break;
 
-        case 3:
-            printf("Saliendo del programa...");
-            isProgramRunning = false;
-            break;
-        default:
-            printf("Error en la interpretación de la opción elejida. Saliendo...");
-            isProgramRunning = false;
-            break;
-        }
-    } while (isProgramRunning);
+    case 3:
+      printf("Saliendo del programa...");
+      isProgramRunning = false;
+      break;
+    default:
+      printf("Error en la interpretación de la opción elejida. Saliendo...");
+      isProgramRunning = false;
+      break;
+    }
+  } while (isProgramRunning);
 
-    return 0;
+  return 0;
 }
 
-void StartAudit()
-{
-    // Proceso comprobar patrones
-    pid_t proceso_patrones;
+void StartAudit() {
+  // Proceso comprobar patrones
+  pid_t proceso_patrones;
 
-    proceso_patrones = fork();
-    if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
-    {
-        processFilesProcess();
-    }
+  proceso_patrones = fork();
+  if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
+  {
+    processFilesProcess();
+  }
 
-    if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
-    {
-        printf("SOY EL HIJO\n");
-        checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
-    }
+  if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
+  {
+    printf("SOY EL HIJO\n");
+    checkPatternsProcess(mutexLogFile, config_file.log_file,
+                         config_file.inventory_file);
+  }
 }
 
-int Menu(int error_flag)
-{
-    int opcion;
-    printf("UFV AUDITA\n\n");
+int Menu(int error_flag) {
+  int opcion;
+  printf("UFV AUDITA\n\n");
 
-    if (error_flag == 1)
-    {
-        printf("Seleccione una opción válida.\n");
-    }
+  if (error_flag == 1) {
+    printf("Seleccione una opción válida.\n");
+  }
 
-    printf("1. Crear estructura de ficheros\n2. Iniciar\n3. Salir\n\n=> ");
-    scanf("%d", &opcion);
-    return opcion > 3 || opcion < 1 ? Menu(1) : opcion;
+  printf("1. Crear estructura de ficheros\n2. Iniciar\n3. Salir\n\n=> ");
+  scanf("%d", &opcion);
+  return opcion > 3 || opcion < 1 ? Menu(1) : opcion;
 }
 
-void readConfigFile(FILE *pf_config)
-{
-    int contador = 0; // Contador de línea en la que estamos del fichero
-    char line[256];   // Línea leída del fichero
+void readConfigFile(FILE *pf_config) {
+  int contador = 0; // Contador de línea en la que estamos del fichero
+  char line[256];   // Línea leída del fichero
 
-    while (fgets(line, sizeof(line), pf_config)) // Leer línea por línea el archivo de configuración
+  while (fgets(line, sizeof(line),
+               pf_config)) // Leer línea por línea el archivo de configuración
+  {
+    char *token = strtok(line, "="); // Separar la línea por el signo de igual
+
+    while (token != NULL) // Mientras queden palabras en la linea
     {
-        char *token = strtok(line, "="); // Separar la línea por el signo de igual
 
-        while (token != NULL) // Mientras queden palabras en la linea
-        {
+      token[strcspn(token, "\n")] = '\0'; // Elimina el salto de línea
 
-            token[strcspn(token, "\n")] = '\0'; // Elimina el salto de línea
+      switch (contador) {
+      case 1: // FATHER_DIR
+        strcpy(config_file.path_files, token);
+        break;
+      case 3: // SUC_DIR
+        strcpy(config_file.suc_dir, token);
+        config_file.suc_dir[strcspn(config_file.suc_dir, "{")] = '\0';
+        break;
+      case 5: // INVENTORY_FILE
+        strcpy(config_file.inventory_file, token);
+        break;
+      case 7: // LOG_FILE
+        strcpy(config_file.log_file, token);
+        break;
+      case 9: // NUM_PROCESSES
+        config_file.num_processes = atoi(token);
+        break;
+      case 11: // SIMULATE_SLEEP_MAX
+        config_file.simulate_sleep_max = atoi(token);
+        break;
+      case 13: // SIMULATE_SLEEP_MIN
+        config_file.simulate_sleep_min = atoi(token);
+        break;
+      case 15: // SIZE_FP
+        config_file.size_fp = atoi(token);
+        break;
+      default:
+        break;
+      }
 
-            switch (contador)
-            {
-            case 1: // FATHER_DIR
-                strcpy(config_file.path_files, token);
-                break;
-            case 3: // SUC_DIR
-                strcpy(config_file.suc_dir, token);
-                config_file.suc_dir[strcspn(config_file.suc_dir, "{")] = '\0';
-                break;
-            case 5: // INVENTORY_FILE
-                strcpy(config_file.inventory_file, token);
-                break;
-            case 7: // LOG_FILE
-                strcpy(config_file.log_file, token);
-                break;
-            case 9: // NUM_PROCESSES
-                config_file.num_processes = atoi(token);
-                break;
-            case 11: // SIMULATE_SLEEP_MAX
-                config_file.simulate_sleep_max = atoi(token);
-                break;
-            case 13: // SIMULATE_SLEEP_MIN
-                config_file.simulate_sleep_min = atoi(token);
-                break;
-            case 15: // SIZE_FP
-                config_file.size_fp = atoi(token);
-                break;
-            default:
-                break;
-            }
-
-            contador++;                // Incrementar el contador de linea
-            token = strtok(NULL, " "); // Siguiente palabra
-        }
+      contador++;                // Incrementar el contador de linea
+      token = strtok(NULL, " "); // Siguiente palabra
     }
+  }
 }
 
-sucursal_file *newFile(char *file_path, char *file_name, char sucursal_number)
-{
-    sucursal_file *nueva_sucursal = (sucursal_file *)malloc(sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
+sucursal_file *newFile(char *file_path, char *file_name, char sucursal_number) {
+  sucursal_file *nueva_sucursal = (sucursal_file *)malloc(
+      sizeof(sucursal_file)); // Reservamos memoria para el nuevo fichero
 
-    strcpy(nueva_sucursal->file_path, file_path);      // Copiamos la ruta del fichero
-    strcpy(nueva_sucursal->file_name, file_name);      // Copiamos el nombre del fichero
-    nueva_sucursal->sucursal_number = sucursal_number; // Copiamos el número de la sucursal
-    nueva_sucursal->num_operations = 0;                // Inicializamos el número de operaciones
+  strcpy(nueva_sucursal->file_path, file_path); // Copiamos la ruta del fichero
+  strcpy(nueva_sucursal->file_name,
+         file_name); // Copiamos el nombre del fichero
+  nueva_sucursal->sucursal_number =
+      sucursal_number;                // Copiamos el número de la sucursal
+  nueva_sucursal->num_operations = 0; // Inicializamos el número de operaciones
 
-    pthread_cond_signal(&cond); // Avisamos a los hilos que deben comprobar si hay un nuevo archivo
+  pthread_cond_signal(&cond); // Avisamos a los hilos que deben comprobar si hay
+                              // un nuevo archivo
 
-    return nueva_sucursal;
+  return nueva_sucursal;
 }
 
-void *reader(void *file)
-{
-    // Se establece simulación de espera
-    srand(time(NULL));
-    sleep(rand() % config_file.simulate_sleep_max + config_file.simulate_sleep_min);
+void *reader(void *file) {
+  // Se establece simulación de espera
+  srand(time(NULL));
+  sleep(rand() % config_file.simulate_sleep_max +
+        config_file.simulate_sleep_min);
 
-    processFiles((sucursal_file *)file); // Procesar el archivo
+  processFiles((sucursal_file *)file); // Procesar el archivo
 
-    free(file); // Liberar memoria
+  free(file); // Liberar memoria
 
-    pthread_exit(NULL); // Salir del hilo
+  pthread_exit(NULL); // Salir del hilo
 }
 
-void processFiles(sucursal_file *file)
-{
-    char line[256];                                  // Línea del fichero
-    time_t time_date = time(NULL);                   // Dato de tiempo
-    char control;                                    // Control de lectura
-    char *logString = malloc(600 * sizeof(char));    // Mensaje a escribir en el log
-    char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
+void processFiles(sucursal_file *file) {
+  char line[256];                               // Línea del fichero
+  time_t time_date = time(NULL);                // Dato de tiempo
+  char control;                                 // Control de lectura
+  char *logString = malloc(600 * sizeof(char)); // Mensaje a escribir en el log
+  char *screenString =
+      malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
 
-    char newDataPath[100] = "../files_data/processed/"; // Ruta de la carpeta de ficheros procesados
+  char newDataPath[100] =
+      "../files_data/processed/"; // Ruta de la carpeta de ficheros procesados
 
-    FILE *sucursal_file = fopen(file->file_path, "r");                // Archivo sucursal a procesar
-    FILE *consolidated_file = fopen(config_file.inventory_file, "a"); // Archivo consolidado
+  FILE *sucursal_file =
+      fopen(file->file_path, "r"); // Archivo sucursal a procesar
+  FILE *consolidated_file =
+      fopen(config_file.inventory_file, "a"); // Archivo consolidado
 
-    if (sucursal_file == NULL) // Error al abrir el archivo de la sucursal
-    {
-        sprintf(logString, SUCURSAL_ERROR, file->file_path);
-        printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
-        return;
-    }
+  if (sucursal_file == NULL) // Error al abrir el archivo de la sucursal
+  {
+    sprintf(logString, SUCURSAL_ERROR, file->file_path);
+    printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
+    return;
+  }
 
-    if (consolidated_file == NULL) // Error al abrir el archivo consolidado
-    {
-        printLogScreen(mutexLogFile, config_file.log_file, CONSOLIDADO_OPEN_ERROR, CONSOLIDADO_OPEN_ERROR);
-        return;
-    }
+  if (consolidated_file == NULL) // Error al abrir el archivo consolidado
+  {
+    printLogScreen(mutexLogFile, config_file.log_file, CONSOLIDADO_OPEN_ERROR,
+                   CONSOLIDADO_OPEN_ERROR);
+    return;
+  }
 
-    // Formato fichero sucursal    -> ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
-    // Formato fichero consolidado -> ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
-    // Formato fichero log         -> DD/MM/AAAA:::HH:MM:SS:::INICIO:::FIN:::NOMBRE_FICHERO:::NUMOPERACIONESCONSOLIDADAS
+  // Formato fichero sucursal    ->
+  // ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
+  // Formato fichero consolidado ->
+  // ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
+  // Formato fichero log         ->
+  // DD/MM/AAAA:::HH:MM:SS:::INICIO:::FIN:::NOMBRE_FICHERO:::NUMOPERACIONESCONSOLIDADAS
 
-    pthread_mutex_lock(&mutex); // Bloquear el mutex
+  pthread_mutex_lock(&mutex); // Bloquear el mutex
 
-    struct tm current_time = *localtime(&time_date); // Fecha y hora actual
-    int flag = 0;                                    // Flag para los patrones de actividades irregulares
+  struct tm current_time = *localtime(&time_date); // Fecha y hora actual
+  int flag = 0; // Flag para los patrones de actividades irregulares
 
-    // Bucle que leerá el fichero de la sucursal hasta que no haya más información y la escribirá en el fichero consolidado
-    while (fgets(line, sizeof(line), sucursal_file))
-    {
-        line[strcspn(line, "\n")] = '\0';                                            // Elimina el salto de línea
-        fprintf(consolidated_file, "%c;%s;%d\n", file->sucursal_number, line, flag); // Escribir en el fichero consolidado
-        file->num_operations++;                                                      // Incrementar el número de operaciones
-    }
+  // Bucle que leerá el fichero de la sucursal hasta que no haya más información
+  // y la escribirá en el fichero consolidado
+  while (fgets(line, sizeof(line), sucursal_file)) {
+    line[strcspn(line, "\n")] = '\0'; // Elimina el salto de línea
+    fprintf(consolidated_file, "%c;%s;%d\n", file->sucursal_number, line,
+            flag);          // Escribir en el fichero consolidado
+    file->num_operations++; // Incrementar el número de operaciones
+  }
 
-    // String que imprimiremos en el log
-    sprintf(logString, "%d/%d/%d:::%d:%d:%d:::%s:::%d", current_time.tm_mday,
-            current_time.tm_mon + 1, current_time.tm_year + 1900,
-            current_time.tm_hour, current_time.tm_min, current_time.tm_sec,
-            file->file_path, file->num_operations);
+  // String que imprimiremos en el log
+  sprintf(logString, "%d/%d/%d:::%d:%d:%d:::%s:::%d", current_time.tm_mday,
+          current_time.tm_mon + 1, current_time.tm_year + 1900,
+          current_time.tm_hour, current_time.tm_min, current_time.tm_sec,
+          file->file_path, file->num_operations);
 
-    // String que imprimiremos por pantalla
-    sprintf(screenString,
-            "Fichero procesado: %s, con %d operaciones consolidadas",
-            file->file_path, file->num_operations);
+  // String que imprimiremos por pantalla
+  sprintf(screenString,
+          "Fichero procesado: %s, con %d operaciones consolidadas",
+          file->file_path, file->num_operations);
 
-    // Escribimos en el log y mostramos por pantalla
-    printLogScreen(mutexLogFile, config_file.log_file, logString, screenString);
+  // Escribimos en el log y mostramos por pantalla
+  printLogScreen(mutexLogFile, config_file.log_file, logString, screenString);
 
-    fclose(sucursal_file);     // Cerar el archivo de la sucursal
-    fclose(consolidated_file); // Cerrar el archivo consolidado
+  fclose(sucursal_file);     // Cerar el archivo de la sucursal
+  fclose(consolidated_file); // Cerrar el archivo consolidado
 
-    rename(file->file_path, strcat(newDataPath, file->file_name)); // Mover el archivo a la carpeta de procesados
-    pthread_mutex_unlock(&mutex);                                  // Desbloquear el mutex
+  rename(
+      file->file_path,
+      strcat(newDataPath,
+             file->file_name)); // Mover el archivo a la carpeta de procesados
+  pthread_mutex_unlock(&mutex); // Desbloquear el mutex
 
-    free(logString);
-    free(screenString);
+  free(logString);
+  free(screenString);
 }
 
-void *verifyNewFile(void *folder_struct)
-{
-    char *logString; // Mensaje a escribir en el log
-    int fileDescriptor, watchDescriptor;
-    char buffer[BUFFER_LENGTH];
+void *verifyNewFile(void *folder_struct) {
+  char *logString; // Mensaje a escribir en el log
+  int fileDescriptor, watchDescriptor;
+  char buffer[BUFFER_LENGTH];
 
-    // Se inicializa el descriptor del inotify
-    fileDescriptor = inotify_init();
+  // Se inicializa el descriptor del inotify
+  fileDescriptor = inotify_init();
 
-    if (fileDescriptor < 0)
-    {   // Se comprueba que se inicialice el descriptor
-        printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
-        exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
+  if (fileDescriptor < 0) { // Se comprueba que se inicialice el descriptor
+    printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR,
+                   INOTIFY_DESCRIPTOR_ERROR);
+    exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con
+                        // error
+  }
+
+  // Se establece el directorio a monitorear
+  watchDescriptor = inotify_add_watch(
+      fileDescriptor, ((sucursal_dir *)folder_struct)->folder_name, IN_CREATE);
+
+  if (watchDescriptor < 0) { // Se comprueba que se inicialice el watcher
+    printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR,
+                   INOTIFY_WATCHER_ERROR);
+    exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con
+                        // error
+  }
+
+  // Se queda a la espera de eventos
+  while (1) {
+    int length, i = 0;
+    time_t time_date = time(NULL); // Dato de tiempo
+
+    // Se leen los bytes del evento
+    length = read(fileDescriptor, buffer, BUFFER_LENGTH);
+
+    if (length < 0) { // Se comprueba que se inicialice correctamente
+      printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR,
+                     INOTIFY_LENGTH_ERROR);
+      exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso
+                          // con error
     }
 
-    // Se establece el directorio a monitorear
-    watchDescriptor = inotify_add_watch(fileDescriptor, ((sucursal_dir *)folder_struct)->folder_name, IN_CREATE);
+    // Se procesan los eventos
+    while (i < length) {
+      char *newNotificationScreen =
+          "\n\n\n"
+          "###               ###   ############   ###                          "
+          " ###\n"
+          "### ###           ###   ############    ###                         "
+          "###\n"
+          "###   ###         ###   ###              ###                       "
+          "###\n"
+          "###     ###       ###   ############      ###                     "
+          "###\n"
+          "###       ###     ###   ############       ###        ###        "
+          "###\n"
+          "###         ###   ###   ###                 ###     ### ###     "
+          "###\n"
+          "###           ### ###   ############         ### ###       ### ###\n"
+          "###               ###   ############          ###            ###\n"
+          "\n\n\n";
 
-    if (watchDescriptor < 0)
-    {   // Se comprueba que se inicialice el watcher
-        printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
-        exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
+      char newNotificationLog[600];
+      struct tm current_time = *localtime(&time_date); // Fecha y hora actual
+
+      sprintf(newNotificationLog,
+              "%d/%d/%d:::%d:%d:%d:::NUEVO FICHERO EN EL DIRECTORIO",
+              current_time.tm_mday, current_time.tm_mon + 1,
+              current_time.tm_year + 1900, current_time.tm_hour,
+              current_time.tm_min, current_time.tm_sec);
+
+      struct inotify_event *event =
+          (struct inotify_event
+               *)&buffer[i]; // Se interpreta los datos del buffer como eventos
+
+      if (event->mask &
+          IN_CREATE) // Se comprueba si se ha creado un nuevo archivo
+      {
+        printLogScreen(mutexLogFile, config_file.log_file, newNotificationLog,
+                       newNotificationScreen); // Imprimir en el log
+        closedir(
+            ((sucursal_dir *)folder_struct)->folder); // Cerrar el directorio
+        ((sucursal_dir *)folder_struct)->folder =
+            opendir(((sucursal_dir *)folder_struct)
+                        ->folder_name); // Abrir el directorio de nuevo
+      }
+
+      i += EVENT_SIZE + event->len; // Se actualiza el tamaño
     }
-
-    // Se queda a la espera de eventos
-    while (1)
-    {
-        int length, i = 0;
-        time_t time_date = time(NULL); // Dato de tiempo
-
-        // Se leen los bytes del evento
-        length = read(fileDescriptor, buffer, BUFFER_LENGTH);
-
-        if (length < 0)
-        {   // Se comprueba que se inicialice correctamente
-            printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
-            exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
-        }
-
-        // Se procesan los eventos
-        while (i < length)
-        {
-            char *newNotificationScreen =
-                "\n\n\n"
-                "###               ###   ############   ###                           ###\n"
-                "### ###           ###   ############    ###                         ###\n"
-                "###   ###         ###   ###              ###                       ###\n"
-                "###     ###       ###   ############      ###                     ###\n"
-                "###       ###     ###   ############       ###        ###        ###\n"
-                "###         ###   ###   ###                 ###     ### ###     ###\n"
-                "###           ### ###   ############         ### ###       ### ###\n"
-                "###               ###   ############          ###            ###\n"
-                "\n\n\n";
-
-            char newNotificationLog[600];
-            struct tm current_time = *localtime(&time_date); // Fecha y hora actual
-
-            sprintf(newNotificationLog,
-                    "%d/%d/%d:::%d:%d:%d:::NUEVO FICHERO EN EL DIRECTORIO",
-                    current_time.tm_mday, current_time.tm_mon + 1,
-                    current_time.tm_year + 1900, current_time.tm_hour,
-                    current_time.tm_min, current_time.tm_sec);
-
-            struct inotify_event *event = (struct inotify_event *)&buffer[i]; // Se interpreta los datos del buffer como eventos
-
-            if (event->mask & IN_CREATE) // Se comprueba si se ha creado un nuevo archivo
-            {
-                printLogScreen(mutexLogFile, config_file.log_file, newNotificationLog, newNotificationScreen);   // Imprimir en el log
-                closedir(((sucursal_dir *)folder_struct)->folder);                                               // Cerrar el directorio
-                ((sucursal_dir *)folder_struct)->folder = opendir(((sucursal_dir *)folder_struct)->folder_name); // Abrir el directorio de nuevo
-            }
-
-            i += EVENT_SIZE + event->len; // Se actualiza el tamaño
-        }
-    }
+  }
 }
 
 // --- PROCESS FUNCTIONS ---
 
-int processFilesProcess()
-{
-    // Directorios de las sucursales
-    char *suc_1_dir_name = malloc(200 * sizeof(char));
-    char *suc_2_dir_name = malloc(200 * sizeof(char));
-    char *suc_3_dir_name = malloc(200 * sizeof(char));
-    char *suc_4_dir_name = malloc(200 * sizeof(char));
+int processFilesProcess() {
+  // Directorios de las sucursales
+  char *suc_1_dir_name = malloc(200 * sizeof(char));
+  char *suc_2_dir_name = malloc(200 * sizeof(char));
+  char *suc_3_dir_name = malloc(200 * sizeof(char));
+  char *suc_4_dir_name = malloc(200 * sizeof(char));
 
-    sucursal_dir *suc_1_dir = (sucursal_dir *)malloc(sizeof(sucursal_dir)); // Reservamos memoria para la sucursal 1
-    sucursal_dir *suc_2_dir = (sucursal_dir *)malloc(sizeof(sucursal_dir)); // Reservamos memoria para la sucursal 2
-    sucursal_dir *suc_3_dir = (sucursal_dir *)malloc(sizeof(sucursal_dir)); // Reservamos memoria para la sucursal 3
-    sucursal_dir *suc_4_dir = (sucursal_dir *)malloc(sizeof(sucursal_dir)); // Reservamos memoria para la sucursal 4
+  sucursal_dir *suc_1_dir = (sucursal_dir *)malloc(
+      sizeof(sucursal_dir)); // Reservamos memoria para la sucursal 1
+  sucursal_dir *suc_2_dir = (sucursal_dir *)malloc(
+      sizeof(sucursal_dir)); // Reservamos memoria para la sucursal 2
+  sucursal_dir *suc_3_dir = (sucursal_dir *)malloc(
+      sizeof(sucursal_dir)); // Reservamos memoria para la sucursal 3
+  sucursal_dir *suc_4_dir = (sucursal_dir *)malloc(
+      sizeof(sucursal_dir)); // Reservamos memoria para la sucursal 4
 
-    sprintf(suc_1_dir_name, "%s/%s1/", config_file.path_files, config_file.suc_dir); // Ruta del directorio de la sucursal 1
-    sprintf(suc_2_dir_name, "%s/%s2/", config_file.path_files, config_file.suc_dir); // Ruta del directorio de la sucursal 1
-    sprintf(suc_3_dir_name, "%s/%s3/", config_file.path_files, config_file.suc_dir); // Ruta del directorio de la sucursal 1
-    sprintf(suc_4_dir_name, "%s/%s4/", config_file.path_files, config_file.suc_dir); // Ruta del directorio de la sucursal 1
+  sprintf(suc_1_dir_name, "%s/%s1/", config_file.path_files,
+          config_file.suc_dir); // Ruta del directorio de la sucursal 1
+  sprintf(suc_2_dir_name, "%s/%s2/", config_file.path_files,
+          config_file.suc_dir); // Ruta del directorio de la sucursal 1
+  sprintf(suc_3_dir_name, "%s/%s3/", config_file.path_files,
+          config_file.suc_dir); // Ruta del directorio de la sucursal 1
+  sprintf(suc_4_dir_name, "%s/%s4/", config_file.path_files,
+          config_file.suc_dir); // Ruta del directorio de la sucursal 1
 
-    strcpy(suc_1_dir->folder_name, suc_1_dir_name); // Almacenamos en la estructura del directorio de la sucursal 1 la ruta
-    strcpy(suc_2_dir->folder_name, suc_2_dir_name); // Almacenamos en la estructura del directorio de la sucursal 1 la ruta
-    strcpy(suc_3_dir->folder_name, suc_3_dir_name); // Almacenamos en la estructura del directorio de la sucursal 1 la ruta
-    strcpy(suc_4_dir->folder_name, suc_4_dir_name); // Almacenamos en la estructura del directorio de la sucursal 1 la ruta
+  strcpy(suc_1_dir->folder_name,
+         suc_1_dir_name); // Almacenamos en la estructura del directorio de la
+                          // sucursal 1 la ruta
+  strcpy(suc_2_dir->folder_name,
+         suc_2_dir_name); // Almacenamos en la estructura del directorio de la
+                          // sucursal 1 la ruta
+  strcpy(suc_3_dir->folder_name,
+         suc_3_dir_name); // Almacenamos en la estructura del directorio de la
+                          // sucursal 1 la ruta
+  strcpy(suc_4_dir->folder_name,
+         suc_4_dir_name); // Almacenamos en la estructura del directorio de la
+                          // sucursal 1 la ruta
 
-    free(suc_1_dir_name);
-    free(suc_2_dir_name);
-    free(suc_3_dir_name);
-    free(suc_4_dir_name);
+  free(suc_1_dir_name);
+  free(suc_2_dir_name);
+  free(suc_3_dir_name);
+  free(suc_4_dir_name);
 
-    // Strings imprimir
-    char *logString = malloc(600 * sizeof(char));    // Mensaje a mostrar en el log
-    char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
+  // Strings imprimir
+  char *logString = malloc(600 * sizeof(char)); // Mensaje a mostrar en el log
+  char *screenString =
+      malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
 
-    // Inicializamos las variables de condición y mutex
-    pthread_cond_init(&cond, NULL);
-    pthread_mutex_init(&mutex, NULL);
-    pthread_mutex_init(&mutexLogFile, NULL);
+  // Inicializamos las variables de condición y mutex
+  pthread_cond_init(&cond, NULL);
+  pthread_mutex_init(&mutex, NULL);
+  pthread_mutex_init(&mutexLogFile, NULL);
 
-    // Inicializar hilos
-    pthread_t th1, th2, th3, th4;
+  // Inicializar hilos
+  pthread_t th1, th2, th3, th4;
 
-    // Mostrar path ficheros
-    time_t time_date = time(NULL);                   // Dato de tiempo
-    struct tm current_time = *localtime(&time_date); // Fecha y hora actual
+  // Mostrar path ficheros
+  time_t time_date = time(NULL);                   // Dato de tiempo
+  struct tm current_time = *localtime(&time_date); // Fecha y hora actual
 
-    // String que imprimiremos en el log
-    sprintf(logString,
-            "%d/%d/%d:::%d:%d:%d:::PROCESAMIENTO ARCHIVOS INICIADO:::DIRECTORIO %s",
-            current_time.tm_mday, current_time.tm_mon + 1,
-            current_time.tm_year + 1900, current_time.tm_hour, current_time.tm_min,
-            current_time.tm_sec, config_file.path_files);
+  // String que imprimiremos en el log
+  sprintf(
+      logString,
+      "%d/%d/%d:::%d:%d:%d:::PROCESAMIENTO ARCHIVOS INICIADO:::DIRECTORIO %s",
+      current_time.tm_mday, current_time.tm_mon + 1,
+      current_time.tm_year + 1900, current_time.tm_hour, current_time.tm_min,
+      current_time.tm_sec, config_file.path_files);
 
-    // String que imprimiremos por pantalla
-    sprintf(screenString,
-            "Procesamiento de archivos iniciado en el directorio: %s",
-            config_file.path_files);
+  // String que imprimiremos por pantalla
+  sprintf(screenString,
+          "Procesamiento de archivos iniciado en el directorio: %s",
+          config_file.path_files);
 
-    // Escribimos en el log y mostramos por pantalla
-    printLogScreen(mutexLogFile, config_file.log_file, logString, screenString);
+  // Escribimos en el log y mostramos por pantalla
+  printLogScreen(mutexLogFile, config_file.log_file, logString, screenString);
 
-    // Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
-    pthread_t newFileThread_SUC1, newFileThread_SUC2, newFileThread_SUC3, newFileThread_SUC4;
+  // Se inicializa un hilo encargado de comprobar la llegada de nuevos archivos
+  pthread_t newFileThread_SUC1, newFileThread_SUC2, newFileThread_SUC3,
+      newFileThread_SUC4;
 
-    int controler_SUC1, controler_SUC2, controler_SUC3, controler_SUC4;
+  int controler_SUC1, controler_SUC2, controler_SUC3, controler_SUC4;
 
-    controler_SUC1 = pthread_create(&newFileThread_SUC1, NULL, verifyNewFile, suc_1_dir);
-    controler_SUC2 = pthread_create(&newFileThread_SUC2, NULL, verifyNewFile, suc_2_dir);
-    controler_SUC3 = pthread_create(&newFileThread_SUC3, NULL, verifyNewFile, suc_3_dir);
-    controler_SUC4 = pthread_create(&newFileThread_SUC4, NULL, verifyNewFile, suc_4_dir);
+  controler_SUC1 =
+      pthread_create(&newFileThread_SUC1, NULL, verifyNewFile, suc_1_dir);
+  controler_SUC2 =
+      pthread_create(&newFileThread_SUC2, NULL, verifyNewFile, suc_2_dir);
+  controler_SUC3 =
+      pthread_create(&newFileThread_SUC3, NULL, verifyNewFile, suc_3_dir);
+  controler_SUC4 =
+      pthread_create(&newFileThread_SUC4, NULL, verifyNewFile, suc_4_dir);
 
-    if (controler_SUC1 < 0 || controler_SUC2 < 0 || controler_SUC3 < 0 || controler_SUC4 < 0)
-    {
-        printLogScreen(mutexLogFile, config_file.log_file, VERIFIER_THREAD_ERROR, VERIFIER_THREAD_ERROR);
-    }
+  if (controler_SUC1 < 0 || controler_SUC2 < 0 || controler_SUC3 < 0 ||
+      controler_SUC4 < 0) {
+    printLogScreen(mutexLogFile, config_file.log_file, VERIFIER_THREAD_ERROR,
+                   VERIFIER_THREAD_ERROR);
+  }
 
-    // Se inicializa un semáforo para sincronizar el procesado de archivos
-    sem_init(&sem_thread_creation, 0, config_file.num_processes);
+  // Se inicializa un semáforo para sincronizar el procesado de archivos
+  sem_init(&sem_thread_creation, 0, config_file.num_processes);
 
-    pthread_create(&th1, NULL, processSucursalDirectory, suc_1_dir); // Crear hilo sucursal 1
-    pthread_create(&th2, NULL, processSucursalDirectory, suc_2_dir); // Crear hilo sucursal 2
-    pthread_create(&th3, NULL, processSucursalDirectory, suc_3_dir); // Crear hilo sucursal 3
-    pthread_create(&th4, NULL, processSucursalDirectory, suc_4_dir); // Crear hilo sucursal 4
+  pthread_create(&th1, NULL, processSucursalDirectory,
+                 suc_1_dir); // Crear hilo sucursal 1
+  pthread_create(&th2, NULL, processSucursalDirectory,
+                 suc_2_dir); // Crear hilo sucursal 2
+  pthread_create(&th3, NULL, processSucursalDirectory,
+                 suc_3_dir); // Crear hilo sucursal 3
+  pthread_create(&th4, NULL, processSucursalDirectory,
+                 suc_4_dir); // Crear hilo sucursal 4
 
-    pthread_join(th1, NULL);
-    pthread_join(th2, NULL);
-    pthread_join(th3, NULL);
-    pthread_join(th4, NULL);
+  pthread_join(th1, NULL);
+  pthread_join(th2, NULL);
+  pthread_join(th3, NULL);
+  pthread_join(th4, NULL);
 
-    pthread_join(newFileThread_SUC1, NULL);
-    pthread_join(newFileThread_SUC2, NULL);
-    pthread_join(newFileThread_SUC3, NULL);
-    pthread_join(newFileThread_SUC4, NULL);
+  pthread_join(newFileThread_SUC1, NULL);
+  pthread_join(newFileThread_SUC2, NULL);
+  pthread_join(newFileThread_SUC3, NULL);
+  pthread_join(newFileThread_SUC4, NULL);
 
-    free(suc_1_dir);
-    free(suc_2_dir);
-    free(suc_3_dir);
-    free(suc_4_dir);
+  free(suc_1_dir);
+  free(suc_2_dir);
+  free(suc_3_dir);
+  free(suc_4_dir);
 
-    free(logString);
-    free(screenString);
+  free(logString);
+  free(screenString);
 
-    return 0;
+  return 0;
 }
 
-void *processSucursalDirectory(void *folder_struct)
-{
-    // Inicializar hilo
-    pthread_t th;
+void *processSucursalDirectory(void *folder_struct) {
+  // Inicializar hilo
+  pthread_t th;
 
-    // Strings imprimir
-    char *logString = malloc(600 * sizeof(char));    // Mensaje a mostrar en el log
-    char *screenString = malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
+  // Strings imprimir
+  char *logString = malloc(600 * sizeof(char)); // Mensaje a mostrar en el log
+  char *screenString =
+      malloc(600 * sizeof(char)); // Mensaje a mostrar por pantalla
 
-    struct dirent *directorio;     // Estructura de directorio
-    sucursal_file *nueva_sucursal; // Reservamos memoria para el nuevo fichero
+  struct dirent *directorio;     // Estructura de directorio
+  sucursal_file *nueva_sucursal; // Reservamos memoria para el nuevo fichero
 
-    char filePath[100]; // Ruta del fichero
+  char filePath[100]; // Ruta del fichero
 
-    ((sucursal_dir *)folder_struct)->folder = opendir(((sucursal_dir *)folder_struct)->folder_name);
+  ((sucursal_dir *)folder_struct)->folder =
+      opendir(((sucursal_dir *)folder_struct)->folder_name);
 
-    if (((sucursal_dir *)folder_struct)->folder == NULL) // Error al abrir el directorio
-    {
-        sprintf(logString, FOLDER_OPEN_ERROR, ((sucursal_dir *)folder_struct)->folder);
-        printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
-        free(logString);
-        free(screenString);
-        return NULL;
-    }
-
-    while (1)
-    {
-        while ((directorio = readdir(((sucursal_dir *)folder_struct)->folder)) != NULL) // Leer el directorio
-        {
-
-            if (directorio->d_type == DT_REG) // Comprobar que sea un archivo
-            {
-                sprintf(filePath, "%s%s", ((sucursal_dir *)folder_struct)->folder_name, directorio->d_name); // Ruta al archivo
-                nueva_sucursal = newFile(filePath, directorio->d_name, filePath[19]);                        // Añadimos un archivo de la sucursal 1 a la lista
-                sem_wait(&sem_thread_creation);
-                pthread_create(&th, NULL, reader, nueva_sucursal); // Creamos el hilo para procesar la sucursal
-                sem_post(&sem_thread_creation);
-                pthread_join(th, NULL);
-                break;
-            }
-        }
-    }
-
-    sleep(1);
-    closedir(((sucursal_dir *)folder_struct)->folder);
+  if (((sucursal_dir *)folder_struct)->folder ==
+      NULL) // Error al abrir el directorio
+  {
+    sprintf(logString, FOLDER_OPEN_ERROR,
+            ((sucursal_dir *)folder_struct)->folder);
+    printLogScreen(mutexLogFile, config_file.log_file, logString, logString);
     free(logString);
     free(screenString);
     return NULL;
+  }
+
+  while (1) {
+    while ((directorio = readdir(((sucursal_dir *)folder_struct)->folder)) !=
+           NULL) // Leer el directorio
+    {
+
+      if (directorio->d_type == DT_REG) // Comprobar que sea un archivo
+      {
+        sprintf(filePath, "%s%s", ((sucursal_dir *)folder_struct)->folder_name,
+                directorio->d_name); // Ruta al archivo
+        nueva_sucursal = newFile(
+            filePath, directorio->d_name,
+            filePath[19]); // Añadimos un archivo de la sucursal 1 a la lista
+        sem_wait(&sem_thread_creation);
+        pthread_create(
+            &th, NULL, reader,
+            nueva_sucursal); // Creamos el hilo para procesar la sucursal
+        sem_post(&sem_thread_creation);
+        pthread_join(th, NULL);
+        break;
+      }
+    }
+  }
+
+  sleep(1);
+  closedir(((sucursal_dir *)folder_struct)->folder);
+  free(logString);
+  free(screenString);
+  return NULL;
 }
