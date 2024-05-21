@@ -6,4 +6,6 @@
 #define INOTIFY_LENGTH_ERROR "Error al obtener el tamaño del evento inotify.\n"
 #define PATTERN_MUTEX_ERROR "Error al inicializar el mutex de los patrones.\n"
 #define FOLDER_OPEN_ERROR "Error al abrir el directorio %s.\n"
-#define VERIFIER_THREAD_ERROR "Error al crear hilo verifier\n"
+#define VERIFIER_THREAD_ERROR "Error al crear hilo verifier.\n"
+#define FORK_ERROR "Error al hacer fork.\n"
+#define EXECVP_ERROR "Error al ejecutar el comando execvp.\n"
