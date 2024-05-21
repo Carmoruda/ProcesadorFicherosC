@@ -89,7 +89,7 @@ void *pattern1(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora, y si el flag está a 0
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
-            enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+                enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
 
             reg_patrones[contadorOperaciones] = registros[i];
@@ -155,9 +155,9 @@ void *pattern2(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un día
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
-            registros[i].Importe < 0 &&
-            registros[i].flag == 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
+                registros[i].Importe < 0 &&
+                registros[i].flag == 0)
         {
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
@@ -217,9 +217,9 @@ void *pattern3(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
-            strcmp(registros[i].Estado, "Error") &&
-            registros[i].flag == 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
+                strcmp(registros[i].Estado, "Error") &&
+                registros[i].flag == 0)
         {
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
@@ -286,7 +286,7 @@ void *pattern4(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un dia
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
 
             strcpy(Usuarios[num_usuarios].IdOperacion, registros[i - 1].IdOperacion);
@@ -304,8 +304,8 @@ void *pattern4(void *arg)
             num_usuarios++;
         }
         else
-        {                                          // Hemos pasado al siguiente usuario, ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
-                                                   // por lo que toca comprobar si el anterior usuario ha hecho o no los 4 tipos de operaciones
+        {   // Hemos pasado al siguiente usuario, ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
+            // por lo que toca comprobar si el anterior usuario ha hecho o no los 4 tipos de operaciones
             int cumpleCondicion[4] = {0, 0, 0, 0}; // Vector que me dirá si se han realizado una o más operaciones de cada tipo.
             int Cumple = 1;                        // Variable de control para comprobar que todas se cumplen.
             for (int j = 0; j < num_usuarios; j++)
@@ -382,7 +382,7 @@ void *pattern5(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             if (registros[i].Importe > 0)
             {
@@ -434,7 +434,7 @@ int readConsolidatedFile()
 
     char linea[MAX_LINE_LENGTH];
     while (fgets(linea, sizeof(linea), archivo) != NULL &&
-           num_registros < MAX_RECORDS)
+            num_registros < MAX_RECORDS)
     {
 
         sscanf(linea, "%d;%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;];%d",
