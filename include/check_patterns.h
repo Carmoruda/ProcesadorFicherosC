@@ -28,6 +28,7 @@ struct Operacion
     int Sucursal;
     float DineroIngr;
     float DineroRet;
+    int flag;
 };
 
 void *pattern1(void *arg);

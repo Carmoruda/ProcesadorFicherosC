@@ -154,7 +154,7 @@ void StartAudit()
     if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
     {
         printf("SOY EL HIJO\n");
-        // checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
+        checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
     }
 }
 
@@ -289,8 +289,9 @@ void processFiles(sucursal_file *file)
     // Bucle que leerá el fichero de la sucursal hasta que no haya más información y la escribirá en el fichero consolidado
     while (fgets(line, sizeof(line), sucursal_file))
     {
-        fprintf(consolidated_file, "%c;%s;%d", file->sucursal_number, line, flag); // Escribir en el fichero consolidado
-        file->num_operations++;                                                    // Incrementar el número de operaciones
+        line[strcspn(line, "\n")] = '\0';                                            // Elimina el salto de línea
+        fprintf(consolidated_file, "%c;%s;%d\n", file->sucursal_number, line, flag); // Escribir en el fichero consolidado
+        file->num_operations++;                                                      // Incrementar el número de operaciones
     }
 
     // String que imprimiremos en el log
