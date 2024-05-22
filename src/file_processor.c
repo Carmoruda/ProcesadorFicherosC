@@ -1165,7 +1165,7 @@ void *pattern5(void *arg)
 
 int readConsolidatedFile()
 {
-    int contador_campo = 0;
+
     int num_registros = 0;
 
 
@@ -1181,11 +1181,12 @@ int readConsolidatedFile()
 
         registros[num_registros].DineroIngr = 0;
         registros[num_registros].DineroRet = 0;
-        printf("file: %s\n", SharedMemory_ptr->files->line);
-        sscanf(SharedMemory_ptr->files->line,"%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;]", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, &registros[num_registros].NoOperacion, &registros[num_registros].Importe, registros[num_registros].Estado);
-        printf("linea: %s\t%s\t %s\t %s\t %d\t %f\t %s\t\n\n\n", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, registros[num_registros].NoOperacion, registros[num_registros].Importe, registros[num_registros].Estado);
-        sleep(10);
+        
+
+        sscanf(SharedMemory_ptr->files[num_registros].line,"%[^;];%[^;];%[^;];%[^;];%d;%f€;%[^;]", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, &registros[num_registros].NoOperacion, &registros[num_registros].Importe, registros[num_registros].Estado);
+        sleep(1);
         num_registros++;
+        
     }
     printf("%d", num_registros);
 
