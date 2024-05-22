@@ -787,7 +787,7 @@ int readConsolidatedFile();
 
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
-        fflush(stdin);
+    
     fflush(stdout);
     mutexLog = mutexLogFile;
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
@@ -831,7 +831,6 @@ void *pattern1(void *arg)
     char ultimoTiempo[100];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
     bool cumpleCondicion = false;
-    printf("PATRON 1: %s %s", ultimoTiempo, ultimoUsuario);
     sleep(10);
     for (int i = 1; i < num_registros; i++)
     {
@@ -854,20 +853,22 @@ void *pattern1(void *arg)
         {
             if (cumpleCondicion == true)
             {
-
+                int k = 0;
                 printf("Datos de la operacion que provoca el patron 1:\n");
-                for (int i = 0; i < contadorOperaciones; i++)
+                for (int j = i; k < contadorOperaciones; j--)
                 {
                     printf("Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
                            "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
                            "Importe: %.2f, Estado: %s\n",
-                           registros[i].Sucursal, registros[i].IdOperacion,
-                           registros[i].FECHA_INICIO, registros[i].FECHA_FIN,
-                           registros[i].IdUsuario, registros[i].IdTipoOperacion,
-                           registros[i].NoOperacion, registros[i].Importe,
-                           registros[i].Estado);
-                    // Cambio el flag a 1 para evitar que se repita el patron incesablemente.
-                    registros[i].flag = 1;
+                           registros[j].Sucursal, registros[j].IdOperacion,
+                           registros[j].FECHA_INICIO, registros[j].FECHA_FIN,
+                           registros[j].IdUsuario, registros[j].IdTipoOperacion,
+                           registros[j].NoOperacion, registros[j].Importe,
+                           registros[j].Estado);
+                        // Cambio el flag a 1 para evitar que se repita el patron incesablemente.
+                        registros[j].flag = 1;
+
+                        k++;
                 }
 
                 printf("FIN DEL PATRON\n\n\n\n");
@@ -919,21 +920,23 @@ void *pattern2(void *arg)
         {
             if (cumpleCondicion == true)
             {
+                int k = 0;
                 printf("Datos de la operacion que provoca el patron 2:\n");
-                for (int i = 0; i < contadorOperaciones; i++)
+                for (int j = i; k < contadorOperaciones; j--)
                 {
-                    printf("Sucursal: "
-                           "%d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
+                    printf("Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
                            "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
                            "Importe: %.2f, Estado: %s\n",
-                           registros[i].Sucursal, registros[i].IdOperacion,
-                           registros[i].FECHA_INICIO, registros[i].FECHA_FIN,
-                           registros[i].IdUsuario, registros[i].IdTipoOperacion,
-                           registros[i].NoOperacion, registros[i].Importe,
-                           registros[i].Estado);
-                    registros[i].flag = 1;
+                           registros[j].Sucursal, registros[j].IdOperacion,
+                           registros[j].FECHA_INICIO, registros[j].FECHA_FIN,
+                           registros[j].IdUsuario, registros[j].IdTipoOperacion,
+                           registros[j].NoOperacion, registros[j].Importe,
+                           registros[j].Estado);
+                        // Cambio el flag a 1 para evitar que se repita el patron incesablemente.
+                        registros[j].flag = 1;
+
+                        k++;
                 }
-                printf("FIN PATRON 2\n\n\n\n");
                 cumpleCondicion = false;
             }
 
@@ -982,20 +985,22 @@ void *pattern3(void *arg)
         {
             if (cumpleCondicion == true)
             {
-                printf("Datos de la operacion que provoca el patron 3:\n");
-                for (int i = 0; i < contadorOperaciones; i++)
+                int k = 0;
+                printf("Datos de la operacion que provoca el patron 1:\n");
+                for (int j = i; k < contadorOperaciones; j--)
                 {
-                    printf("Sucursal: "
-                           "%d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
+                    printf("Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
                            "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
                            "Importe: %.2f, Estado: %s\n",
-                           registros[i].Sucursal, registros[i].IdOperacion,
-                           registros[i].FECHA_INICIO, registros[i].FECHA_FIN,
-                           registros[i].IdUsuario, registros[i].IdTipoOperacion,
-                           registros[i].NoOperacion, registros[i].Importe,
-                           registros[i].Estado);
-                    // Cambio el flag a 1, para no revisar esta operacion más, porque ya cumplió un patron
-                    registros[i].flag = 1;
+                           registros[j].Sucursal, registros[j].IdOperacion,
+                           registros[j].FECHA_INICIO, registros[j].FECHA_FIN,
+                           registros[j].IdUsuario, registros[j].IdTipoOperacion,
+                           registros[j].NoOperacion, registros[j].Importe,
+                           registros[j].Estado);
+                        // Cambio el flag a 1 para evitar que se repita el patron incesablemente.
+                        registros[j].flag = 1;
+
+                        k++;
                 }
                 cumpleCondicion = false;
             }
@@ -1052,8 +1057,8 @@ void *pattern4(void *arg)
             num_usuarios++;
         }
         else
-        {                                          // Hemos pasado al siguiente usuario, ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
-                                                   // por lo que toca comprobar si el anterior usuario ha hecho o no los 4 tipos de operaciones
+        {// Hemos pasado al siguiente usuario, ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
+         // por lo que toca comprobar si el anterior usuario ha hecho o no los 4 tipos de operaciones
             int cumpleCondicion[4] = {0, 0, 0, 0}; // Vector que me dirá si se han realizado una o más operaciones de cada tipo.
             int Cumple = 1;                        // Variable de control para comprobar que todas se cumplen.
             for (int j = 0; j < num_usuarios; j++)
@@ -1165,7 +1170,7 @@ void *pattern5(void *arg)
 
 int readConsolidatedFile()
 {
-
+    fflush(stdout);
     int num_registros = 0;
 
 
@@ -1173,7 +1178,7 @@ int readConsolidatedFile()
     // pthread_mutex_lock(&mutexPatterns);
 
     // Leer los registros del archivo y almacenarlos en una matriz
-    while (num_registros<= SharedMemory_ptr->filesCount)
+    while (num_registros < SharedMemory_ptr->filesCount)
     {
         // Formato fichero consolidado -> ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
         registros[num_registros].Sucursal = SharedMemory_ptr->files->sucursal_number;
@@ -1197,6 +1202,7 @@ int readConsolidatedFile()
     {
         // Ordenar el vector por fecha de inicio y usuario
         qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+        qsort(registros, num_registros, sizeof(struct Operacion), comparar_por_fecha_inicio);
     }
     for(int i = 0; i < num_registros; i++){
         printf("SI SOY %s %s %s %s %s %d %f %s\n", 
@@ -1219,7 +1225,12 @@ int comparar_registros(const void *a, const void *b)
 
     return strcmp(registro1->IdUsuario, registro2->IdUsuario);
 }
-
+// Función de comparación para ordenar por fecha de inicio
+int comparar_por_fecha_inicio(const void *a, const void *b) {
+  const struct Operacion *op1 = (const struct Operacion *)a;
+  const struct Operacion *op2 = (const struct Operacion *)b;
+  return strcmp(op1->FECHA_INICIO, op2->FECHA_INICIO);
+}
 
 // Función para verificar si se superan las 5 operaciones por hora
 int enElMismoDía(char *fecha1, char *fecha2)
