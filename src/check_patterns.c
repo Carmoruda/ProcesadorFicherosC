@@ -42,7 +42,7 @@ int readConsolidatedFile();
 
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
-        fflush(stdin);
+    fflush(stdin);
     fflush(stdout);
     mutexLog = mutexLogFile;
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
@@ -70,7 +70,7 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
     pthread_join(th_pattern1, NULL);
     pthread_join(th_pattern2, NULL);
-   //pthread_join(th_pattern3, NULL);
+    //pthread_join(th_pattern3, NULL);
     //pthread_join(th_pattern4, NULL);
     pthread_join(th_pattern5, NULL);
 
@@ -93,7 +93,7 @@ void *pattern1(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora, y si el flag está a 0
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+                enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
@@ -105,7 +105,7 @@ void *pattern1(void *arg)
 
             }
         }
-        else 
+        else
         {
             if (cumpleCondicion == true)
             {
@@ -158,11 +158,11 @@ void *pattern2(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un día
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
-            registros[i].Importe < 0 &&
-            registros[i].flag == 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
+                registros[i].Importe < 0 &&
+                registros[i].flag == 0)
         {
-            
+
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
             // Si el usuario realiza 3 o más operaciones de retiro en un mismo día.
@@ -390,7 +390,7 @@ void *pattern5(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             if (registros[i].Importe > 0)
             {
@@ -406,7 +406,7 @@ void *pattern5(void *arg)
             if (registros[i - 1].DineroRet > registros[i - 1].DineroIngr)
             {
                 printf("El usuario %s ha retirado más dinero del que ha ingresado.",
-                registros[i - 1].IdUsuario);
+                       registros[i - 1].IdUsuario);
                 registros[i].flag = 1;
             }
         }
