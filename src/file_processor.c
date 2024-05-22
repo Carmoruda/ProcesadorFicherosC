@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <time.h>
+#include <signal.h>
 
 pthread_cond_t cond;          // Variable de condición de los hilos
 pthread_mutex_t mutex;        // Mutex para la exclusión mutua
@@ -147,7 +148,7 @@ int main()
     char *args[] = {"./create_structure.sh", NULL};
     bool isProgramRunning = true;
 
-
+    signal(SIGINT, CloseTriggered);
 
     if(CreateSharedMemory(config_file.size_fp, &IDSharedMemory, &SharedMemory_ptr) == -1){
         printf("Error al crear la memoria virtual.");
