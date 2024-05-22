@@ -123,7 +123,14 @@ int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **shar
 /// @param sucInfo Fichero a añadir a la memoria comapartida
 void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, sucursal_info sucInfo);
 
+/// @brief Copia la información de la memoria compartida en el archivo csv
+/// @param sharedMemory_ptr Puntero a la memoria compartida
+/// @param ConsolidatedPath Localización del csv consolidado 
 void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *ConsolidatedPath);
+
+/// @brief Llama a ConsolidateMemory al hacer Ctrl + C
+/// @param signal Señal SIGINT
+void CloseTriggered(int signal);
 
 //Variables memoria compartida
 int IDSharedMemory;
