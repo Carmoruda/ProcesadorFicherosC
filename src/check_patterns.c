@@ -42,6 +42,8 @@ int readConsolidatedFile();
 
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
+        fflush(stdin);
+    fflush(stdout);
     mutexLog = mutexLogFile;
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
 
@@ -60,16 +62,18 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
         pthread_create(&th_pattern1, NULL, pattern1, NULL);
         pthread_create(&th_pattern2, NULL, pattern2, NULL);
-        pthread_create(&th_pattern3, NULL, pattern3, NULL);
-        pthread_create(&th_pattern4, NULL, pattern4, NULL);
+        //pthread_create(&th_pattern3, NULL, pattern3, NULL);
+        //pthread_create(&th_pattern4, NULL, pattern4, NULL);
         pthread_create(&th_pattern5, NULL, pattern5, NULL);
+        sleep(10);
     }
 
     pthread_join(th_pattern1, NULL);
     pthread_join(th_pattern2, NULL);
-    pthread_join(th_pattern3, NULL);
-    pthread_join(th_pattern4, NULL);
+   //pthread_join(th_pattern3, NULL);
+    //pthread_join(th_pattern4, NULL);
     pthread_join(th_pattern5, NULL);
+
     return 0;
 }
 
@@ -77,36 +81,35 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
 void *pattern1(void *arg)
 {
-
     int contadorOperaciones = 0;
     char ultimoUsuario[100];
+    strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
+    strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
     bool cumpleCondicion = false;
 
-    for (int i = 0; i < num_registros; i++)
+    for (int i = 1; i < num_registros; i++)
     {
-
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora, y si el flag está a 0
-        if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
+        if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
-
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
-
             // Si el usuario realiza 5 o más operaciones dentro de una hora, hacer
             // algo
-            if (contadorOperaciones >= 5)
+            if (contadorOperaciones > 2)
             {
                 cumpleCondicion = true;
+
             }
         }
-        else
+        else 
         {
-
             if (cumpleCondicion == true)
             {
+
                 printf("Datos de la operacion que provoca el patron 1:\n");
                 for (int i = 0; i < contadorOperaciones; i++)
                 {
@@ -136,7 +139,6 @@ void *pattern1(void *arg)
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
-
     pthread_exit(NULL);
 }
 
@@ -144,21 +146,23 @@ void *pattern1(void *arg)
 
 void *pattern2(void *arg)
 {
-
     int contadorOperaciones = 0;
-    char ultimoUsuario[20];
-    char ultimoTiempo[20];
+    char ultimoUsuario[100];
+    strcpy(ultimoUsuario, registros[0].IdUsuario);
+    char ultimoTiempo[100];
+    strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
     bool cumpleCondicion = false;
 
-    for (int i = 0; i < num_registros; i++)
+    for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un día
-        if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
+        if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
             registros[i].Importe < 0 &&
             registros[i].flag == 0)
         {
+            
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
             // Si el usuario realiza 3 o más operaciones de retiro en un mismo día.
@@ -171,6 +175,7 @@ void *pattern2(void *arg)
         {
             if (cumpleCondicion == true)
             {
+                printf("Entra");
                 printf("Datos de la operacion que provoca el patron 2:\n");
                 for (int i = 0; i < contadorOperaciones; i++)
                 {
@@ -203,16 +208,17 @@ void *pattern2(void *arg)
 }
 
 /// --- Pattern 3 ---
-
+/*
 void *pattern3(void *arg)
 {
-
-    int contadorOperaciones = 0;
-    char ultimoUsuario[20];
-    char ultimoTiempo[20];
+    /*int contadorOperaciones = 0;
+    char ultimoUsuario[100];
+    strcpy(ultimoUsuario, registros[0].IdUsuario);
+    char ultimoTiempo[100];
+    strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
     bool cumpleCondicion = false;
 
-    for (int i = 0; i < num_registros; i++)
+    for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora
@@ -268,7 +274,6 @@ void *pattern3(void *arg)
 
 void *pattern4(void *arg)
 {
-
     struct Operacion *Usuarios = NULL; // Vector de estructuras dinámico
     int tamanoInicial = 100;           // Tamaño inicial del vector (puedes ajustarlo según tus necesidades)
     Usuarios = (struct Operacion *)malloc(tamanoInicial * sizeof(struct Operacion));
@@ -334,7 +339,7 @@ void *pattern4(void *arg)
             // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
             if (Cumple = 1)
             {
-                printf("Datos de la operacion que provoca el patron 3:\n");
+                printf("Datos de la operacion que provoca el patron 4:\n");
                 for (int j = 0; j < num_usuarios; j++)
                 {
                     printf("Sucursal: "
@@ -369,19 +374,22 @@ void *pattern4(void *arg)
 
     pthread_exit(NULL);
 }
+*/
+/// --- Pattern 5 ---
 
 void *pattern5(void *arg)
 {
-
     int contadorOperaciones = 0;
-    char ultimoUsuario[20];
-    char ultimoTiempo[20];
+    char ultimoUsuario[100];
+    strcpy(ultimoUsuario, registros[0].IdUsuario);
+    char ultimoTiempo[100];
+    strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
 
-    for (int i = 0; i < num_registros; i++)
+    for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora
-        if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
+        if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             if (registros[i].Importe > 0)
@@ -393,13 +401,12 @@ void *pattern5(void *arg)
                 registros[i].DineroRet += abs(registros[i].Importe);
             }
         }
-        else
+        else if(strcmp(registros[i].IdUsuario, ultimoUsuario) == 1)
         {
             if (registros[i - 1].DineroRet > registros[i - 1].DineroIngr)
             {
-                printf("El usuario %d ha ingresado menos de lo que ha retirado en un "
-                       "mismo día.",
-                       registros[i - 1].IdUsuario);
+                printf("El usuario %s ha retirado más dinero del que ha ingresado.",
+                registros[i - 1].IdUsuario);
                 registros[i].flag = 1;
             }
         }
@@ -415,7 +422,6 @@ void *pattern5(void *arg)
 
 int readConsolidatedFile()
 {
-
     int num_registros = 0;
     char archive[200] = "../output/fich_consolidado.csv";
 
@@ -431,11 +437,10 @@ int readConsolidatedFile()
     // pthread_mutex_lock(&mutexPatterns);
 
     // Leer los registros del archivo y almacenarlos en una matriz
-
     char linea[MAX_LINE_LENGTH];
-    while (fgets(linea, sizeof(linea), archivo) != NULL &&
-           num_registros < MAX_RECORDS)
+    while (fgets(linea, sizeof(linea), archivo) != NULL)
     {
+        // Formato fichero consolidado -> ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
 
         sscanf(linea, "%d;%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;];%d",
                &registros[num_registros].Sucursal,
@@ -451,16 +456,18 @@ int readConsolidatedFile()
         registros[num_registros].DineroRet = 0;
         num_registros++;
     }
+
     // Cerrar el archivo
     fclose(archivo);
 
     // Desbloquear el mutex después de acceder al archivo
     // pthread_mutex_unlock(&mutexPatterns);
 
-    // Ordenar el vector por fecha de inicio y usuario
-    qsort(registros, num_registros, sizeof(struct Operacion),
-          comparar_por_fecha_inicio);
-    qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    if (num_registros > 1)
+    {
+        // Ordenar el vector por fecha de inicio y usuario
+        qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    }
 
     return num_registros;
 }
@@ -472,36 +479,47 @@ int comparar_registros(const void *a, const void *b)
 
     return strcmp(registro1->IdUsuario, registro2->IdUsuario);
 }
-// Función de comparación para ordenar por fecha de inicio
-int comparar_por_fecha_inicio(const void *a, const void *b)
-{
-    const struct Operacion *op1 = (const struct Operacion *)a;
-    const struct Operacion *op2 = (const struct Operacion *)b;
-    return strcmp(op1->FECHA_INICIO, op2->FECHA_INICIO);
-}
+
 
 // Función para verificar si se superan las 5 operaciones por hora
 int enElMismoDía(char *fecha1, char *fecha2)
 {
-    time_t f1, f2, diferencia;
-    f1 = (long)fecha1;
-    f2 = (long)fecha2;
-    diferencia = f1 - f2;
-    unsigned long long int dias = diferencia / 60;
+    int dia1, mes1, anio1, hora1, minuto1;
+    int dia2, mes2, anio2, hora2, minuto2;
 
-    return dias == 0 ? 1 : 0;
+    // Parseamos las fechas
+    sscanf(fecha1, "%2d/%2d/%4d%2d:%2d", &dia1, &mes1, &anio1, &hora1, &minuto1);
+    sscanf(fecha2, "%2d/%2d/%4d%2d:%2d", &dia2, &mes2, &anio2, &hora2, &minuto2);
+
+    // Comparamos día, mes y año
+    if (dia1 == dia2 && mes1 == mes2 && anio1 == anio2)
+    {
+        return 1; // Están en el mismo día
+    }
+    else
+    {
+        return 0; // No están en el mismo día
+    }
 }
 
 // Función para verificar si se superan las 5 operaciones por hora
 int enLaMismaHora(char *fecha1, char *fecha2)
 {
-    time_t f1, f2, diferencia;
-    f1 = (long)fecha1;
-    f2 = (long)fecha2;
-    diferencia = f1 - f2;
-    unsigned long long int horas = diferencia / 60 / 60;
-    diferencia -= 60 * 60 * horas;
-    unsigned long long int minutos = diferencia / 60;
-    diferencia -= 60 * minutos;
-    return diferencia <= 3600 ? 1 : 0;
+    int dia1, mes1, anio1, hora1, minuto1;
+    int dia2, mes2, anio2, hora2, minuto2;
+
+    // Parseamos las fechas
+    sscanf(fecha1, "%2d/%2d/%4d%2d:%2d", &dia1, &mes1, &anio1, &hora1, &minuto1);
+    sscanf(fecha2, "%2d/%2d/%4d%2d:%2d", &dia2, &mes2, &anio2, &hora2, &minuto2);
+
+    // Comparamos día, mes, año y hora
+    if (dia1 == dia2 && mes1 == mes2 && anio1 == anio2 && hora1 == hora2)
+    {
+        return 1; // Están en la misma hora
+    }
+    else
+    {
+
+        return 0; // No están en la misma hora
+    }
 }

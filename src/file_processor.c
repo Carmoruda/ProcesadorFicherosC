@@ -246,7 +246,7 @@ int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedM
   (*sharedMemory_ptr)->filesCount = 0;
   (*sharedMemory_ptr)->usedSize = 0;
 
-  return 0;
+    return 0;
 }
 
 int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **sharedMemory_ptr) {
