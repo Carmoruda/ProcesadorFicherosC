@@ -22,18 +22,18 @@ pthread_mutex_t mutex;        // Mutex para la exclusión mutua
 pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
 sem_t sem_thread_creation;    // Semáforo para controlar la creación de hilos
 
-typedef struct sucursal_info{
-  char sucursal_number;
-  char line[300];
-  int flag;
-}sucursal_info;
+typedef struct sucursal_info {
+    char sucursal_number;
+    char line[300];
+    int flag;
+} sucursal_info;
 
 typedef struct {
-  size_t mcSize;
-  size_t usedSize;
-  int filesCount;
-  sucursal_info files[];
-}shared_memory;
+    size_t mcSize;
+    size_t usedSize;
+    int filesCount;
+    sucursal_info files[];
+} shared_memory;
 
 /// @brief Estructura que contiene la información de los archivos de las
 /// sucursales
@@ -126,7 +126,7 @@ void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, 
 
 /// @brief Copia la información de la memoria compartida en el archivo csv
 /// @param sharedMemory_ptr Puntero a la memoria compartida
-/// @param ConsolidatedPath Localización del csv consolidado 
+/// @param ConsolidatedPath Localización del csv consolidado
 void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *ConsolidatedPath);
 
 /// @brief Llama a ConsolidateMemory al hacer Ctrl + C
@@ -150,7 +150,7 @@ int main()
 
     signal(SIGINT, CloseTriggered);
 
-    if(CreateSharedMemory(config_file.size_fp, &IDSharedMemory, &SharedMemory_ptr) == -1){
+    if(CreateSharedMemory(config_file.size_fp, &IDSharedMemory, &SharedMemory_ptr) == -1) {
         printf("Error al crear la memoria virtual.");
         return EXIT_FAILURE;
     }
@@ -215,7 +215,7 @@ void StartAudit()
     }
 }
 
-void CloseTriggered(int signal){
+void CloseTriggered(int signal) {
     printf("\nConsolidando memoria antes de salir...\n");
     printf("Líneas en MC: %d", SharedMemory_ptr->filesCount);
     ConsolidateMemory(SharedMemory_ptr, config_file.inventory_file);
@@ -223,29 +223,29 @@ void CloseTriggered(int signal){
     exit(0);
 }
 
-int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr){
-  //Se crea la key
-  __key_t smkey = ftok("../output/fich_consolidado.csv", 7);
-  if(smkey == -1){
-    printf("Error al generar key MC.");
-    return -1;
-  }
-  //Se crea la zona de memoria compartida
-  *idSharedMemory = shmget(smkey, size, IPC_CREAT | 0666);
-  if(*idSharedMemory == -1){
-    printf("Error al crear la zona de memoria compartida.");
-    return -1;
-  }
-  //Se asigna la memoria compartida
-  *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
-  if(*sharedMemory_ptr == (void *)-1){
-    printf("Error asignando MC.");
-    return -1;
-  }
-  //Se incializa la memoria de la MC
-  (*sharedMemory_ptr)->mcSize = size;
-  (*sharedMemory_ptr)->filesCount = 0;
-  (*sharedMemory_ptr)->usedSize = 0;
+int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr) {
+    //Se crea la key
+    __key_t smkey = ftok("../output/fich_consolidado.csv", 7);
+    if(smkey == -1) {
+        printf("Error al generar key MC.");
+        return -1;
+    }
+    //Se crea la zona de memoria compartida
+    *idSharedMemory = shmget(smkey, size, IPC_CREAT | 0666);
+    if(*idSharedMemory == -1) {
+        printf("Error al crear la zona de memoria compartida.");
+        return -1;
+    }
+    //Se asigna la memoria compartida
+    *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
+    if(*sharedMemory_ptr == (void *)-1) {
+        printf("Error asignando MC.");
+        return -1;
+    }
+    //Se incializa la memoria de la MC
+    (*sharedMemory_ptr)->mcSize = size;
+    (*sharedMemory_ptr)->filesCount = 0;
+    (*sharedMemory_ptr)->usedSize = 0;
 
     return 0;
 }
@@ -254,7 +254,7 @@ int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **shar
     // Guardar el tamaño usado anteriormente y el número de archivos
     size_t prevUsedSize = (*sharedMemory_ptr)->usedSize;
     int filesCount = (*sharedMemory_ptr)->filesCount;
-    
+
     // Guardar un puntero a la memoria compartida actual
     shared_memory *oldMemory_ptr = *sharedMemory_ptr;
 
@@ -310,7 +310,7 @@ void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, 
             return;
         }
     }
-    
+
     (*sharedMemory_ptr)->files[(*sharedMemory_ptr)->filesCount] = sucInfo;
     (*sharedMemory_ptr)->usedSize += sizeof(sucInfo);
     (*sharedMemory_ptr)->filesCount++;
@@ -320,7 +320,7 @@ void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, 
         ConsolidateMemory(*sharedMemory_ptr, config_file.inventory_file);
         printf("Ficheros consolidados en %s", config_file.inventory_file);
     }
-    
+
 }
 
 void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *ConsolidatedPath) {
@@ -523,7 +523,7 @@ void *verifyNewFile(void *folder_struct)
     fileDescriptor = inotify_init();
 
     if (fileDescriptor < 0)
-    { // Se comprueba que se inicialice el descriptor
+    {   // Se comprueba que se inicialice el descriptor
         printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -532,7 +532,7 @@ void *verifyNewFile(void *folder_struct)
     watchDescriptor = inotify_add_watch(fileDescriptor, ((sucursal_dir *)folder_struct)->folder_name, IN_CREATE);
 
     if (watchDescriptor < 0)
-    { // Se comprueba que se inicialice el watcher
+    {   // Se comprueba que se inicialice el watcher
         printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -547,7 +547,7 @@ void *verifyNewFile(void *folder_struct)
         length = read(fileDescriptor, buffer, BUFFER_LENGTH);
 
         if (length < 0)
-        { // Se comprueba que se inicialice correctamente
+        {   // Se comprueba que se inicialice correctamente
             printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
             exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
         }
@@ -787,7 +787,7 @@ int readConsolidatedFile();
 
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
-        fflush(stdin);
+    fflush(stdin);
     fflush(stdout);
     mutexLog = mutexLogFile;
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
@@ -814,7 +814,7 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
     pthread_join(th_pattern1, NULL);
     pthread_join(th_pattern2, NULL);
-   //pthread_join(th_pattern3, NULL);
+    //pthread_join(th_pattern3, NULL);
     //pthread_join(th_pattern4, NULL);
     pthread_join(th_pattern5, NULL);
 
@@ -837,7 +837,7 @@ void *pattern1(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora, y si el flag está a 0
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+                enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
@@ -849,7 +849,7 @@ void *pattern1(void *arg)
 
             }
         }
-        else 
+        else
         {
             if (cumpleCondicion == true)
             {
@@ -902,11 +902,11 @@ void *pattern2(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un día
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
-            registros[i].Importe < 0 &&
-            registros[i].flag == 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
+                registros[i].Importe < 0 &&
+                registros[i].flag == 0)
         {
-            
+
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
             // Si el usuario realiza 3 o más operaciones de retiro en un mismo día.
@@ -1134,7 +1134,7 @@ void *pattern5(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             if (registros[i].Importe > 0)
             {
@@ -1150,7 +1150,7 @@ void *pattern5(void *arg)
             if (registros[i - 1].DineroRet > registros[i - 1].DineroIngr)
             {
                 printf("El usuario %s ha retirado más dinero del que ha ingresado.",
-                registros[i - 1].IdUsuario);
+                       registros[i - 1].IdUsuario);
                 registros[i].flag = 1;
             }
         }
