@@ -62,15 +62,16 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
         pthread_create(&th_pattern1, NULL, pattern1, NULL);
         pthread_create(&th_pattern2, NULL, pattern2, NULL);
-        pthread_create(&th_pattern3, NULL, pattern3, NULL);
-        pthread_create(&th_pattern4, NULL, pattern4, NULL);
+        //pthread_create(&th_pattern3, NULL, pattern3, NULL);
+        //pthread_create(&th_pattern4, NULL, pattern4, NULL);
         pthread_create(&th_pattern5, NULL, pattern5, NULL);
+        sleep(10);
     }
 
     pthread_join(th_pattern1, NULL);
     pthread_join(th_pattern2, NULL);
-    pthread_join(th_pattern3, NULL);
-    pthread_join(th_pattern4, NULL);
+   //pthread_join(th_pattern3, NULL);
+    //pthread_join(th_pattern4, NULL);
     pthread_join(th_pattern5, NULL);
 
     return 0;
@@ -97,17 +98,18 @@ void *pattern1(void *arg)
         {
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
-
+            printf("%d\n\n", i);
             // Si el usuario realiza 5 o más operaciones dentro de una hora, hacer
             // algo
-            if (contadorOperaciones >= 5)
+            if (contadorOperaciones > 2)
             {
+                        printf("%s %s\n\n\n", ultimoTiempo, ultimoUsuario);
+
                 cumpleCondicion = true;
 
             }
-            printf("EEEE%s\n\n", registros[i].IdUsuario);
         }
-        else if(strcmp(registros[i].IdUsuario, ultimoUsuario) == 0)
+        else 
         {
             if (cumpleCondicion == true)
             {
@@ -141,7 +143,6 @@ void *pattern1(void *arg)
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
-
     pthread_exit(NULL);
 }
 
@@ -211,7 +212,7 @@ void *pattern2(void *arg)
 }
 
 /// --- Pattern 3 ---
-
+/*
 void *pattern3(void *arg)
 {
     /*int contadorOperaciones = 0;
@@ -269,7 +270,7 @@ void *pattern3(void *arg)
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
-*/
+
     pthread_exit(NULL);
 }
 
@@ -342,7 +343,7 @@ void *pattern4(void *arg)
             // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
             if (Cumple = 1)
             {
-                printf("Datos de la operacion que provoca el patron 3:\n");
+                printf("Datos de la operacion que provoca el patron 4:\n");
                 for (int j = 0; j < num_usuarios; j++)
                 {
                     printf("Sucursal: "
@@ -377,7 +378,7 @@ void *pattern4(void *arg)
 
     pthread_exit(NULL);
 }
-
+*/
 /// --- Pattern 5 ---
 
 void *pattern5(void *arg)
