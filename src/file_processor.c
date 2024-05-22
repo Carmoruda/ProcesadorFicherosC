@@ -1181,45 +1181,9 @@ int readConsolidatedFile()
 
         registros[num_registros].DineroIngr = 0;
         registros[num_registros].DineroRet = 0;
-
-        char *token = strtok(SharedMemory_ptr->files->line, ";"); // Separar la línea por el signo de igual
-        while (token != NULL) // Mientras queden palabras en la linea
-        {
-                    printf("\ntoken: %s\n", token);
-
-            switch (contador_campo)
-            {
-            case 1: // Id operacion s
-                strcpy(registros[num_registros].IdOperacion, token);
-                break;
-            case 2: // FechaInicio s
-                strcpy(registros[num_registros].FECHA_INICIO, token);                
-                break;
-            case 3: // Fecha Fin s
-                strcpy(registros[num_registros].FECHA_FIN, token);                
-                break;
-            case 4: // Id USer s
-                strcpy(registros[num_registros].IdUsuario, token);                
-                break;
-            case 5: // IdTipo s
-                strcpy(registros[num_registros].IdTipoOperacion, token);                
-                break;
-            case 6: //Nº d
-                registros[num_registros].NoOperacion = atoi(token);
-                break;
-            case 7: // Importe f
-                registros[num_registros].Importe = atof(token);
-                break;
-            case 8: // Estado s
-                strcpy(registros[num_registros].Estado, token);                
-                break;
-            default:
-                break;
-            }
-        contador_campo++; //Incrementar el contador
-        token = strtok(NULL," ");
-        }
-        printf("%s %s %s %s %d %f %s\n", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, registros[num_registros].NoOperacion, registros[num_registros].Importe, registros[num_registros].Estado);
+        printf("file: %s\n", SharedMemory_ptr->files->line);
+        sscanf(SharedMemory_ptr->files->line,"%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;]", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, &registros[num_registros].NoOperacion, &registros[num_registros].Importe, registros[num_registros].Estado);
+        printf("linea: %s\t%s\t %s\t %s\t %d\t %f\t %s\t\n\n\n", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, registros[num_registros].NoOperacion, registros[num_registros].Importe, registros[num_registros].Estado);
         sleep(10);
         num_registros++;
     }
