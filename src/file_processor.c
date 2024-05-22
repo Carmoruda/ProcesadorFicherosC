@@ -118,10 +118,12 @@ int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedM
 int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **sharedMemory_ptr);
 
 /// @brief Añade información a la memoria compartida
+/// @param idSharedMemory ID de la memoria compartida
 /// @param sharedMemory_ptr Puntero a la memoria compartida
 /// @param sucInfo Fichero a añadir a la memoria comapartida
-void addDataSharedMemory(shared_memory *sharedMemory_ptr, sucursal_info sucInfo);
+void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, sucursal_info sucInfo);
 
+void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *ConsolidatedPath);
 
 //Variables memoria compartida
 int IDSharedMemory;
@@ -129,6 +131,7 @@ shared_memory *SharedMemory_ptr;
 
 int main()
 {
+    fflush(stdout);
     // Leer archivo de configuración
     FILE *file = fopen(CONFIG_PATH, "r");
     readConfigFile(file);
@@ -231,48 +234,78 @@ int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedM
   return 0;
 }
 
+int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **sharedMemory_ptr) {
+    // Guardar el tamaño usado anteriormente y el número de archivos
+    size_t prevUsedSize = (*sharedMemory_ptr)->usedSize;
+    int filesCount = (*sharedMemory_ptr)->filesCount;
+    
+    // Guardar un puntero a la memoria compartida actual
+    shared_memory *oldMemory_ptr = *sharedMemory_ptr;
 
-int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **sharedMemory_ptr){
-  //Guardo el tamaño usado anteriormente
-  int prevUsedSize = (*sharedMemory_ptr)->usedSize;
-  //Comprobaciones previas
-  if(shmdt(*sharedMemory_ptr) == -1){
-    printf("Error ResizeMemory al desasociar la memoria.");
-    return -1;
-  }
+    // Crear una nueva zona de memoria compartida
+    int newSharedMemoryID = shmget(IPC_PRIVATE, newSize, IPC_CREAT | 0666);
+    if (newSharedMemoryID == -1) {
+        printf("Error al crear la zona de memoria compartida ResizeSharedMemory.\n");
+        return -1;
+    }
 
-  *idSharedMemory = shmget(IPC_PRIVATE ,newSize, IPC_CREAT | 0666 );
-    if(*idSharedMemory == -1){
-    printf("Error al crear la zona de memoria compartida ResizeSharedMemory.");
-    return -1;
-  }
-  //Se asigna la memoria compartida
-  *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
-  if(*sharedMemory_ptr == (void *)-1){
-    printf("Error asignando MC ResizeSharedMemory.");
-    return -1;
-  }
-  //Se incializa la memoria de la MC
-  (*sharedMemory_ptr)->mcSize = newSize;
-  (*sharedMemory_ptr)->filesCount = 0;
-  (*sharedMemory_ptr)->usedSize = prevUsedSize;
-  return 0;
+    // Asociar la nueva memoria compartida
+    shared_memory *newMemory_ptr = (shared_memory *)shmat(newSharedMemoryID, NULL, 0);
+    if (newMemory_ptr == (void *)-1) {
+        printf("Error asignando MC ResizeSharedMemory.\n");
+        return -1;
+    }
+
+    // Inicializar la nueva memoria compartida
+    newMemory_ptr->mcSize = newSize;
+    newMemory_ptr->usedSize = prevUsedSize;
+    newMemory_ptr->filesCount = filesCount;
+
+    // Calcular el tamaño de los datos a copiar
+    size_t dataSize = prevUsedSize - sizeof(shared_memory) + sizeof(sucursal_info) * filesCount;
+
+    // Copiar los datos desde la memoria antigua a la nueva
+    memcpy(newMemory_ptr->files, oldMemory_ptr->files, dataSize);
+
+    // Desasociar la memoria antigua
+    if (shmdt(oldMemory_ptr) == -1) {
+        printf("Error ResizeMemory al desasociar la memoria antigua.\n");
+        return -1;
+    }
+
+    // Eliminar la memoria compartida antigua
+    if (shmctl(*idSharedMemory, IPC_RMID, NULL) == -1) {
+        printf("Error eliminando la memoria compartida antigua.\n");
+        return -1;
+    }
+
+    // Actualizar el identificador de memoria compartida y el puntero
+    *idSharedMemory = newSharedMemoryID;
+    *sharedMemory_ptr = newMemory_ptr;
+
+    return 0;
 }
 
-void AddDataSharedMemory(shared_memory *sharedMemory_ptr, sucursal_info sucInfo){
-    bool isMemoryFull = false;
-    do{
-        if(sharedMemory_ptr->usedSize + sizeof(sucInfo) > sharedMemory_ptr->mcSize){
-        ResizeSharedMemory(0, sizeof(sucInfo), &sharedMemory_ptr);
-        isMemoryFull = true;
+void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, sucursal_info sucInfo) {
+    if ((*sharedMemory_ptr)->usedSize + sizeof(sucInfo) > (*sharedMemory_ptr)->mcSize) {
+        size_t newSize = (*sharedMemory_ptr)->mcSize + sizeof(sucInfo);
+        if (ResizeSharedMemory(idSharedMemory, newSize, sharedMemory_ptr) == -1) {
+            printf("Error redimensionando la memoria compartida.\n");
+            return;
         }
-        else{
-            isMemoryFull = false;
-        }
-    }while(!isMemoryFull);
-    sharedMemory_ptr->files[sharedMemory_ptr->filesCount] = sucInfo;
-    sharedMemory_ptr->usedSize += sizeof(sucInfo);
-    sharedMemory_ptr->filesCount++;
+    }
+    
+    (*sharedMemory_ptr)->files[(*sharedMemory_ptr)->filesCount] = sucInfo;
+    (*sharedMemory_ptr)->usedSize += sizeof(sucInfo);
+    (*sharedMemory_ptr)->filesCount++;
+
+    if ((*sharedMemory_ptr)->filesCount >= 1)
+    {
+        printf("Llegue\n");
+        ConsolidateMemory(*sharedMemory_ptr, config_file.inventory_file);
+        printf("Salí\n");
+    }
+    
 }
 
 void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *ConsolidatedPath) {
@@ -283,14 +316,14 @@ void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *Consolidated
         return;
     }
 
-    pthread_mutex_lock(&mutex); // Bloquear el mutex
+    //pthread_mutex_lock(&mutex); // Bloquear el mutex
 
     for (size_t i = 0; i < sharedMemory_ptr->filesCount; i++) {
         sucursal_info sucInfo = sharedMemory_ptr->files[i];
         fprintf(consolidated_ptr, "%c;%s;%d\n", sucInfo.sucursal_number, sucInfo.line, sucInfo.flag);
     }
 
-    pthread_mutex_unlock(&mutex); // Desbloquear el mutex
+    //pthread_mutex_unlock(&mutex); // Desbloquear el mutex
 
     fclose(consolidated_ptr);
 }
@@ -437,7 +470,7 @@ void processFiles(sucursal_file *file, shared_memory *sharedMemory_ptr)
         line[strcspn(line, "\n")] = '\0'; // Elimina el salto de línea
         sucursal_info sucInfo = {file->sucursal_number, "", flag};
         strncpy(sucInfo.line, line, sizeof(sucInfo.line));
-        AddDataSharedMemory(sharedMemory_ptr, sucInfo);
+        AddDataSharedMemory(&IDSharedMemory,&sharedMemory_ptr, sucInfo);
         file->num_operations++;
     }
 
