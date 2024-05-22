@@ -919,7 +919,6 @@ void *pattern2(void *arg)
         {
             if (cumpleCondicion == true)
             {
-                printf("Entra");
                 printf("Datos de la operacion que provoca el patron 2:\n");
                 for (int i = 0; i < contadorOperaciones; i++)
                 {
@@ -1174,7 +1173,6 @@ int readConsolidatedFile()
     // pthread_mutex_lock(&mutexPatterns);
 
     // Leer los registros del archivo y almacenarlos en una matriz
-    char linea[MAX_LINE_LENGTH];
     while (num_registros<= SharedMemory_ptr->filesCount)
     {
         // Formato fichero consolidado -> ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
@@ -1185,9 +1183,9 @@ int readConsolidatedFile()
         registros[num_registros].DineroRet = 0;
 
         char *token = strtok(SharedMemory_ptr->files->line, ";"); // Separar la línea por el signo de igual
-        
         while (token != NULL) // Mientras queden palabras en la linea
         {
+                    printf("\ntoken: %s\n", token);
 
             switch (contador_campo)
             {
@@ -1221,9 +1219,11 @@ int readConsolidatedFile()
         contador_campo++; //Incrementar el contador
         token = strtok(NULL," ");
         }
+        printf("%s %s %s %s %d %f %s\n", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, registros[num_registros].NoOperacion, registros[num_registros].Importe, registros[num_registros].Estado);
+        sleep(10);
         num_registros++;
     }
-
+    printf("%d", num_registros);
 
     // Desbloquear el mutex después de acceder al archivo
     // pthread_mutex_unlock(&mutexPatterns);
