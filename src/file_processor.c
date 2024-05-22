@@ -214,6 +214,13 @@ void StartAudit()
     }
 }
 
+void CloseTriggered(int signal){
+    printf("Consolidando memoria antes de salir...");
+    ConsolidateMemory(SharedMemory_ptr, config_file.inventory_file);
+    printf("Ficheros consolidados correctamente en %s.", config_file.inventory_file);
+    exit(0);
+}
+
 int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr){
   //Se crea la key
   __key_t smkey = ftok("../output/fich_consolidado.csv", 7);
