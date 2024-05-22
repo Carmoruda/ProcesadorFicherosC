@@ -299,11 +299,10 @@ void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, 
     (*sharedMemory_ptr)->usedSize += sizeof(sucInfo);
     (*sharedMemory_ptr)->filesCount++;
 
-    if ((*sharedMemory_ptr)->filesCount >= 1)
+    if ((*sharedMemory_ptr)->filesCount == 3)
     {
-        printf("Llegue\n");
         ConsolidateMemory(*sharedMemory_ptr, config_file.inventory_file);
-        printf("Salí\n");
+        printf("Ficheros consolidados en %s", config_file.inventory_file);
     }
     
 }
