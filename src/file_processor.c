@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <signal.h>
+#include <termios.h>
 
 pthread_cond_t cond;          // Variable de condición de los hilos
 pthread_mutex_t mutex;        // Mutex para la exclusión mutua
@@ -221,6 +222,18 @@ void CloseTriggered(int signal){
     ConsolidateMemory(SharedMemory_ptr, config_file.inventory_file);
     printf("Ficheros consolidados correctamente en %s.\n", config_file.inventory_file);
     exit(0);
+}
+
+int getch() {
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
 }
 
 int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr){
@@ -736,9 +749,14 @@ void *processSucursalDirectory(void *folder_struct)
                 break;
             }
         }
+        int ch = getch();
+        if (ch == ' ') {
+            printf("Barra espaciadora presionada. Consolidando memoria...\n");
+            CloseTriggered(0);
+        }
     }
 
-    sleep(1);
+    //sleep(1);
     closedir(((sucursal_dir *)folder_struct)->folder);
     free(logString);
     free(screenString);
