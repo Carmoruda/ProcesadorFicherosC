@@ -1,5 +1,5 @@
 #!/bin/bash
 
-gcc check_patterns.c file_processor.c show_information.c  -pthread -o fileprocesor
+gcc file_processor.c show_information.c  -pthread -o fileprocesor
 
 echo "Ejecutable creado satisfactoriamente!"
