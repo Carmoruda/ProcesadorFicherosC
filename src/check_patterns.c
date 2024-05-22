@@ -90,21 +90,17 @@ void *pattern1(void *arg)
 
     for (int i = 1; i < num_registros; i++)
     {
-
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora, y si el flag está a 0
-        if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
+        if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
-            printf("%d\n\n", i);
             // Si el usuario realiza 5 o más operaciones dentro de una hora, hacer
             // algo
             if (contadorOperaciones > 2)
             {
-                        printf("%s %s\n\n\n", ultimoTiempo, ultimoUsuario);
-
                 cumpleCondicion = true;
 
             }
@@ -161,7 +157,7 @@ void *pattern2(void *arg)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un día
-        if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
+        if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
             registros[i].Importe < 0 &&
             registros[i].flag == 0)
@@ -393,7 +389,7 @@ void *pattern5(void *arg)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora
-        if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
+        if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             if (registros[i].Importe > 0)
@@ -405,13 +401,12 @@ void *pattern5(void *arg)
                 registros[i].DineroRet += abs(registros[i].Importe);
             }
         }
-        else
+        else if(strcmp(registros[i].IdUsuario, ultimoUsuario) == 1)
         {
             if (registros[i - 1].DineroRet > registros[i - 1].DineroIngr)
             {
-                printf("El usuario %d ha ingresado menos de lo que ha retirado en un "
-                       "mismo día.",
-                       registros[i - 1].IdUsuario);
+                printf("El usuario %s ha retirado más dinero del que ha ingresado.",
+                registros[i - 1].IdUsuario);
                 registros[i].flag = 1;
             }
         }
@@ -471,7 +466,6 @@ int readConsolidatedFile()
     if (num_registros > 1)
     {
         // Ordenar el vector por fecha de inicio y usuario
-        qsort(registros, num_registros, sizeof(struct Operacion), comparar_por_fecha_inicio);
         qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
     }
 
@@ -485,13 +479,7 @@ int comparar_registros(const void *a, const void *b)
 
     return strcmp(registro1->IdUsuario, registro2->IdUsuario);
 }
-// Función de comparación para ordenar por fecha de inicio
-int comparar_por_fecha_inicio(const void *a, const void *b)
-{
-    const struct Operacion *op1 = (const struct Operacion *)a;
-    const struct Operacion *op2 = (const struct Operacion *)b;
-    return strcmp(op1->FECHA_INICIO, op2->FECHA_INICIO);
-}
+
 
 // Función para verificar si se superan las 5 operaciones por hora
 int enElMismoDía(char *fecha1, char *fecha2)
