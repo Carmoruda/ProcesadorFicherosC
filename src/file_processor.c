@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <time.h>
+#include <signal.h>
 
 pthread_cond_t cond;          // Variable de condición de los hilos
 pthread_mutex_t mutex;        // Mutex para la exclusión mutua
@@ -123,7 +124,14 @@ int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **shar
 /// @param sucInfo Fichero a añadir a la memoria comapartida
 void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, sucursal_info sucInfo);
 
+/// @brief Copia la información de la memoria compartida en el archivo csv
+/// @param sharedMemory_ptr Puntero a la memoria compartida
+/// @param ConsolidatedPath Localización del csv consolidado 
 void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *ConsolidatedPath);
+
+/// @brief Llama a ConsolidateMemory al hacer Ctrl + C
+/// @param signal Señal SIGINT
+void CloseTriggered(int signal);
 
 //Variables memoria compartida
 int IDSharedMemory;
@@ -140,7 +148,7 @@ int main()
     char *args[] = {"./create_structure.sh", NULL};
     bool isProgramRunning = true;
 
-
+    signal(SIGINT, CloseTriggered);
 
     if(CreateSharedMemory(config_file.size_fp, &IDSharedMemory, &SharedMemory_ptr) == -1){
         printf("Error al crear la memoria virtual.");
@@ -205,6 +213,13 @@ void StartAudit()
         printf("SOY EL HIJO\n");
         checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
     }
+}
+
+void CloseTriggered(int signal){
+    printf("Consolidando memoria antes de salir...");
+    ConsolidateMemory(SharedMemory_ptr, config_file.inventory_file);
+    printf("Ficheros consolidados correctamente en %s.", config_file.inventory_file);
+    exit(0);
 }
 
 int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr){
