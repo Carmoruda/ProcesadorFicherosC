@@ -42,6 +42,8 @@ int readConsolidatedFile();
 
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
+        fflush(stdin);
+    fflush(stdout);
     mutexLog = mutexLogFile;
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
 
@@ -93,7 +95,6 @@ void *pattern1(void *arg)
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
             enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
-
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
 
@@ -102,13 +103,15 @@ void *pattern1(void *arg)
             if (contadorOperaciones >= 5)
             {
                 cumpleCondicion = true;
-            }
-        }
-        else
-        {
 
+            }
+            printf("EEEE%s\n\n", registros[i].IdUsuario);
+        }
+        else if(strcmp(registros[i].IdUsuario, ultimoUsuario) == 0)
+        {
             if (cumpleCondicion == true)
             {
+
                 printf("Datos de la operacion que provoca el patron 1:\n");
                 for (int i = 0; i < contadorOperaciones; i++)
                 {
@@ -162,6 +165,7 @@ void *pattern2(void *arg)
             registros[i].Importe < 0 &&
             registros[i].flag == 0)
         {
+            
             reg_patrones[contadorOperaciones] = registros[i];
             contadorOperaciones++;
             // Si el usuario realiza 3 o más operaciones de retiro en un mismo día.
@@ -174,6 +178,7 @@ void *pattern2(void *arg)
         {
             if (cumpleCondicion == true)
             {
+                printf("Entra");
                 printf("Datos de la operacion que provoca el patron 2:\n");
                 for (int i = 0; i < contadorOperaciones; i++)
                 {
@@ -209,7 +214,7 @@ void *pattern2(void *arg)
 
 void *pattern3(void *arg)
 {
-    int contadorOperaciones = 0;
+    /*int contadorOperaciones = 0;
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
@@ -264,7 +269,7 @@ void *pattern3(void *arg)
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
-
+*/
     pthread_exit(NULL);
 }
 
@@ -436,11 +441,11 @@ int readConsolidatedFile()
     // pthread_mutex_lock(&mutexPatterns);
 
     // Leer los registros del archivo y almacenarlos en una matriz
-
     char linea[MAX_LINE_LENGTH];
-    while (fgets(linea, sizeof(linea), archivo) != NULL &&
-           num_registros < MAX_RECORDS)
+    while (fgets(linea, sizeof(linea), archivo) != NULL)
     {
+        // Formato fichero consolidado -> ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
+
         sscanf(linea, "%d;%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;];%d",
                &registros[num_registros].Sucursal,
                registros[num_registros].IdOperacion,

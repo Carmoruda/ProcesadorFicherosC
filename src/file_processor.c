@@ -119,6 +119,8 @@ int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **shar
 
 int main()
 {
+    fflush(stdin);
+    fflush(stdout);
     // Leer archivo de configuración
     FILE *file = fopen(CONFIG_PATH, "r");
     readConfigFile(file);
