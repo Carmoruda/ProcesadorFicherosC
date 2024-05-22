@@ -206,12 +206,14 @@ void StartAudit()
     proceso_patrones = fork();
     if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
     {
+        printf("\n****************************************\n");
+        printf("\nPresione SPACE para detener el programa.\n");
+        printf("\n****************************************\n");
         processFilesProcess();
     }
 
     if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
     {
-        printf("SOY EL HIJO\n");
         checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
     }
 }
@@ -596,6 +598,9 @@ void *verifyNewFile(void *folder_struct)
                 printLogScreen(mutexLogFile, config_file.log_file, newNotificationLog, newNotificationScreen);   // Imprimir en el log
                 closedir(((sucursal_dir *)folder_struct)->folder);                                               // Cerrar el directorio
                 ((sucursal_dir *)folder_struct)->folder = opendir(((sucursal_dir *)folder_struct)->folder_name); // Abrir el directorio de nuevo
+                printf("\n****************************************\n");
+                printf("\nPresione SPACE para detener el programa.\n");
+                printf("\n****************************************\n");
             }
 
             i += EVENT_SIZE + event->len; // Se actualiza el tamaño
@@ -751,7 +756,6 @@ void *processSucursalDirectory(void *folder_struct)
         }
         int ch = getch();
         if (ch == ' ') {
-            printf("Barra espaciadora presionada. Consolidando memoria...\n");
             CloseTriggered(0);
         }
     }
