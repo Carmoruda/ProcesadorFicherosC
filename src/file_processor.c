@@ -831,7 +831,8 @@ void *pattern1(void *arg)
     char ultimoTiempo[100];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
     bool cumpleCondicion = false;
-
+    printf("PATRON 1: %s %s", ultimoTiempo, ultimoUsuario);
+    sleep(10);
     for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
@@ -857,8 +858,7 @@ void *pattern1(void *arg)
                 printf("Datos de la operacion que provoca el patron 1:\n");
                 for (int i = 0; i < contadorOperaciones; i++)
                 {
-                    printf("Sucursal: "
-                           "%d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
+                    printf("Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
                            "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
                            "Importe: %.2f, Estado: %s\n",
                            registros[i].Sucursal, registros[i].IdOperacion,
@@ -1183,12 +1183,12 @@ int readConsolidatedFile()
         registros[num_registros].DineroRet = 0;
         
 
-        sscanf(SharedMemory_ptr->files[num_registros].line,"%[^;];%[^;];%[^;];%[^;];%d;%f€;%[^;]", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, &registros[num_registros].NoOperacion, &registros[num_registros].Importe, registros[num_registros].Estado);
+        sscanf(SharedMemory_ptr->files[num_registros].line,"%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f€;%[^;]", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, registros[num_registros].IdTipoOperacion, &registros[num_registros].NoOperacion, &registros[num_registros].Importe, registros[num_registros].Estado);
         sleep(1);
         num_registros++;
         
     }
-    printf("%d", num_registros);
+    
 
     // Desbloquear el mutex después de acceder al archivo
     // pthread_mutex_unlock(&mutexPatterns);
@@ -1198,7 +1198,17 @@ int readConsolidatedFile()
         // Ordenar el vector por fecha de inicio y usuario
         qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
     }
-
+    for(int i = 0; i < num_registros; i++){
+        printf("SI SOY %s %s %s %s %s %d %f %s\n", 
+        registros[i].IdOperacion,
+        registros[i].FECHA_INICIO,
+        registros[i].FECHA_FIN,
+        registros[i].IdUsuario,
+        registros[i].IdTipoOperacion,
+        registros[i].NoOperacion,
+        registros[i].Importe,
+        registros[i].Estado);
+    }
     return num_registros;
 }
 // Función de apoyo a la función de qsort, para ordenar por usuarios.
