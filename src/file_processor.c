@@ -1166,43 +1166,64 @@ void *pattern5(void *arg)
 
 int readConsolidatedFile()
 {
+    int contador_campo = 0;
     int num_registros = 0;
-    char archive[200] = "../output/fich_consolidado.csv";
 
-    // Abrir el archivo en modo lectura y escritura
-    FILE *archivo = fopen(archive, "r+");
-    if (archivo == NULL)
-    {
-        perror("Error al abrir el archivo");
-        pthread_exit(NULL);
-    }
 
     // Bloquear el mutex antes de acceder al archivo
     // pthread_mutex_lock(&mutexPatterns);
 
     // Leer los registros del archivo y almacenarlos en una matriz
     char linea[MAX_LINE_LENGTH];
-    while (fgets(linea, sizeof(linea), archivo) != NULL)
+    while (num_registros<= SharedMemory_ptr->filesCount)
     {
         // Formato fichero consolidado -> ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
+        registros[num_registros].Sucursal = SharedMemory_ptr->files->sucursal_number;
+        registros[num_registros].flag = SharedMemory_ptr->files->flag;
 
-        sscanf(linea, "%d;%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;];%d",
-               &registros[num_registros].Sucursal,
-               registros[num_registros].IdOperacion,
-               registros[num_registros].FECHA_INICIO,
-               registros[num_registros].FECHA_FIN,
-               registros[num_registros].IdUsuario,
-               registros[num_registros].IdTipoOperacion,
-               &registros[num_registros].NoOperacion,
-               &registros[num_registros].Importe, registros[num_registros].Estado,
-               registros[num_registros].flag);
         registros[num_registros].DineroIngr = 0;
         registros[num_registros].DineroRet = 0;
+
+        char *token = strtok(SharedMemory_ptr->files->line, ";"); // Separar la línea por el signo de igual
+        
+        while (token != NULL) // Mientras queden palabras en la linea
+        {
+
+            switch (contador_campo)
+            {
+            case 1: // Id operacion s
+                strcpy(registros[num_registros].IdOperacion, token);
+                break;
+            case 2: // FechaInicio s
+                strcpy(registros[num_registros].FECHA_INICIO, token);                
+                break;
+            case 3: // Fecha Fin s
+                strcpy(registros[num_registros].FECHA_FIN, token);                
+                break;
+            case 4: // Id USer s
+                strcpy(registros[num_registros].IdUsuario, token);                
+                break;
+            case 5: // IdTipo s
+                strcpy(registros[num_registros].IdTipoOperacion, token);                
+                break;
+            case 6: //Nº d
+                registros[num_registros].NoOperacion = atoi(token);
+                break;
+            case 7: // Importe f
+                registros[num_registros].Importe = atof(token);
+                break;
+            case 8: // Estado s
+                strcpy(registros[num_registros].Estado, token);                
+                break;
+            default:
+                break;
+            }
+        contador_campo++; //Incrementar el contador
+        token = strtok(NULL," ");
+        }
         num_registros++;
     }
 
-    // Cerrar el archivo
-    fclose(archivo);
 
     // Desbloquear el mutex después de acceder al archivo
     // pthread_mutex_unlock(&mutexPatterns);
