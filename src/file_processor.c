@@ -820,7 +820,7 @@ pthread_mutex_t mutexLog;      // Mutex para el acceso al log
 pthread_mutex_t mutexPatterns;
 
 struct Operacion registros[MAX_RECORDS];
-struct Operacion reg_patrones[MAX_RECORDS];
+
 
 int num_registros;
 
@@ -853,9 +853,13 @@ int enElMismoDía(char *fecha1, char *fecha2);
 /// @return Devuelve el número de operaciones que hay en el consolidado.
 int readConsolidatedFile();
 
+int comparar_registros3(const void *a, const void *b);
+
+void convertir_fecha(const char* fecha_str, struct tm* fecha_tm) ;
+
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
-        fflush(stdin);
+    
     fflush(stdout);
     mutexLog = mutexLogFile;
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
@@ -871,19 +875,21 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
     while (1)
     {
+        
         num_registros = readConsolidatedFile();
 
         pthread_create(&th_pattern1, NULL, pattern1, NULL);
         pthread_create(&th_pattern2, NULL, pattern2, NULL);
-        //pthread_create(&th_pattern3, NULL, pattern3, NULL);
-        //pthread_create(&th_pattern4, NULL, pattern4, NULL);
+        pthread_create(&th_pattern3, NULL, pattern3, NULL);
+        pthread_create(&th_pattern4, NULL, pattern4, NULL);
         pthread_create(&th_pattern5, NULL, pattern5, NULL);
+        sleep(15);
     }
 
     pthread_join(th_pattern1, NULL);
     pthread_join(th_pattern2, NULL);
-   //pthread_join(th_pattern3, NULL);
-    //pthread_join(th_pattern4, NULL);
+    pthread_join(th_pattern3, NULL);
+    pthread_join(th_pattern4, NULL);
     pthread_join(th_pattern5, NULL);
 
     return 0;
@@ -891,201 +897,307 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
 // --- Pattern 1 ---
 
+sem_t mutex1;
 void *pattern1(void *arg)
 {
-    int contadorOperaciones = 0;
+    sem_init(&mutex1, 0, 1);
+    sem_wait(&mutex1);
+    //Ordeno el vector de "registros" por usuario y fecha a la vez, para pasarle el filtro del patron 1.
+    if (num_registros > 1)
+    {
+        // Ordenar el vector por fecha de inicio y usuario
+        qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    }
+    
+    //En Usuarios guardaré los registros que cumplen el patron. (Misma Hora, Mismo Usuario)
+    struct Operacion *Usuarios = NULL;
+    int tamanoInicial = 100; // Tamaño inicial del vector
+    Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
+    
+
+    int num_usuario = 0; 
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
-    bool cumpleCondicion = false;
-
+    
     for (int i = 1; i < num_registros; i++)
     {
+        //printf("Usuario actual y anterior :%s y %s\n", registros[i].IdUsuario, ultimoUsuario);
+        //printf("Tiempo actual y anterior :%s y %s\n", registros[i].FECHA_INICIO, ultimoTiempo);
+        sleep(1);
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora, y si el flag está a 0
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
-            reg_patrones[contadorOperaciones] = registros[i];
-            contadorOperaciones++;
-            // Si el usuario realiza 5 o más operaciones dentro de una hora, hacer
-            // algo
-            if (contadorOperaciones > 2)
-            {
-                cumpleCondicion = true;
-
-            }
+            strcpy(Usuarios[num_usuario].IdOperacion, registros[i - 1].IdOperacion);
+            strcpy(Usuarios[num_usuario].FECHA_INICIO, registros[i - 1].FECHA_INICIO);
+            strcpy(Usuarios[num_usuario].FECHA_FIN, registros[i - 1].FECHA_FIN);
+            strcpy(Usuarios[num_usuario].IdUsuario, registros[i - 1].IdUsuario);
+            strcpy(Usuarios[num_usuario].IdTipoOperacion, registros[i - 1].IdTipoOperacion);
+            Usuarios[num_usuario].NoOperacion = registros[i - 1].NoOperacion;
+            Usuarios[num_usuario].Importe = registros[i - 1].Importe;
+            strcpy(Usuarios[num_usuario].Estado, registros[i - 1].Estado);
+            Usuarios[num_usuario].Sucursal = registros[i - 1].Sucursal;
+            Usuarios[num_usuario].DineroIngr = registros[i - 1].DineroIngr;
+            Usuarios[num_usuario].DineroRet = registros[i - 1].DineroRet;
+            Usuarios[num_usuario].flag = registros[i - 1].flag;
+            num_usuario++;
+            
         }
-        else 
-        {
-            if (cumpleCondicion == true)
+        else if(strcmp(registros[i].IdUsuario, ultimoUsuario) == 1 || i == num_registros)
+        {   
+            // Hemos pasado al siguiente usuario (o es el ultimo usuario), ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
+            // por lo que toca comprobar si el anterior usuario ha hecho o no 5 o más operaciones en una hora
+            int cumpleCondicion = 0; // Variable que me dirá si se han realizado 5 operaciones en una hora o más.
+            if(num_usuario > 4)
             {
-
-                printf("Datos de la operacion que provoca el patron 1:\n");
-                for (int i = 0; i < contadorOperaciones; i++)
+                cumpleCondicion = 1; //Se cumple que haya hecho un mimo usuario 5 operaciones o más en una hora.
+            
+            
+                // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
+                if (cumpleCondicion == 1)
                 {
-                    printf("Sucursal: "
-                           "%d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
-                           "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
-                           "Importe: %.2f, Estado: %s\n",
-                           registros[i].Sucursal, registros[i].IdOperacion,
-                           registros[i].FECHA_INICIO, registros[i].FECHA_FIN,
-                           registros[i].IdUsuario, registros[i].IdTipoOperacion,
-                           registros[i].NoOperacion, registros[i].Importe,
-                           registros[i].Estado);
-                    // Cambio el flag a 1 para evitar que se repita el patron incesablemente.
-                    registros[i].flag = 1;
+                    printf("\n\nESTE USUARIO HA HECHO 5 O MAS MOVIMIENTOS EN UNA HORA:\n");
+                    for (int j = 0; j < num_usuario; j++)
+                    {
+                        printf("IdUsuario: %s, FECHA_INICIO: %s",                           
+                           Usuarios[j].IdUsuario,
+                           Usuarios[j].FECHA_INICIO);
+                    }
+                    cumpleCondicion  = 0;
                 }
-
-                printf("FIN DEL PATRON\n\n\n\n");
-                cumpleCondicion = false;
             }
-
-            // Reiniciar el contador de operaciones para un nuevo usuario o una nueva
-            // hora
-            contadorOperaciones = 0;
+            //Libero el vector Usuarios dinámico para poder reutilizarlo en un posible siguiente usuario.
+           free(Usuarios);
+           struct Operacion *Usuarios = NULL;
+           int tamanoInicial = 100; // Tamaño inicial del vector
+           Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
         }
-
+        
         // Actualizar el usuario y el tiempo para la próxima iteración
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
+    sem_wait(&mutex1);
     pthread_exit(NULL);
 }
 
 /// --- Pattern 2 ---
 
+sem_t mutex2;
 void *pattern2(void *arg)
 {
-    int contadorOperaciones = 0;
+     // Inicialización del semáforo
+    sem_init(&mutex2, 0, 1);
+    sem_wait(&mutex2);
+    //Ordeno el vector de "registros" por usuario y fecha a la vez, para pasarle el filtro del patron 1.
+    if (num_registros > 1)
+    {
+        // Ordenar el vector por fecha de inicio y usuario
+        qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    }
+    //En Usuarios guardaré los registros que cumplen el patron. (Misma Hora, Mismo Usuario)
+    struct Operacion *Usuarios = NULL;
+    int tamanoInicial = 100; // Tamaño inicial del vector
+    Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
+    
+
+    int num_usuario = 0; 
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
-    bool cumpleCondicion = false;
-
+    
     for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
-        // de un día
+        // de un día y si se ha realizado un retiro
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
-            registros[i].Importe < 0 &&
-            registros[i].flag == 0)
+            registros[i].Importe < 0)
         {
+            //Añadimos las operaciones que pueden cumplir el patron
+            strcpy(Usuarios[num_usuario].IdOperacion, registros[i].IdOperacion);
+            strcpy(Usuarios[num_usuario].FECHA_INICIO, registros[i].FECHA_INICIO);
+            strcpy(Usuarios[num_usuario].FECHA_FIN, registros[i].FECHA_FIN);
+            strcpy(Usuarios[num_usuario].IdUsuario, registros[i].IdUsuario);
+            strcpy(Usuarios[num_usuario].IdTipoOperacion, registros[i].IdTipoOperacion);
+            Usuarios[num_usuario].NoOperacion = registros[i].NoOperacion;
+            Usuarios[num_usuario].Importe = registros[i].Importe;
+            strcpy(Usuarios[num_usuario].Estado, registros[i].Estado);
+            Usuarios[num_usuario].Sucursal = registros[i].Sucursal;
+            Usuarios[num_usuario].DineroIngr = registros[i].DineroIngr;
+            Usuarios[num_usuario].DineroRet = registros[i].DineroRet;
+            Usuarios[num_usuario].flag = registros[i].flag;
+            //printf("\nENTRO num_user: %d USER: %s, IMPORTE: %f ",num_usuario, Usuarios[num_usuario].IdUsuario, Usuarios[num_usuario].Importe);
+            num_usuario++;
             
-            reg_patrones[contadorOperaciones] = registros[i];
-            contadorOperaciones++;
-            // Si el usuario realiza 3 o más operaciones de retiro en un mismo día.
-            if (contadorOperaciones >= 3)
-            {
-                cumpleCondicion = true;
-            }
         }
-        else
-        {
-            if (cumpleCondicion == true)
+        else if(strcmp(registros[i].IdUsuario, ultimoUsuario) != 0)
+        {   
+             //printf("\nNO ENTRO num_user: %d USER: %s, IMPORTE: %f ",num_usuario, registros[i].IdUsuario, registros[i].Importe);
+
+            // Hemos pasado al siguiente usuario (o es el ultimo usuario), ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
+            // por lo que toca comprobar si el anterior usuario ha hecho o no 5 o más operaciones en una hora
+            int cumpleCondicion = 0; // Variable que me dirá si se han realizado 5 operaciones en una hora o más.
+            if(num_usuario > 1)
             {
-                printf("Entra");
-                printf("Datos de la operacion que provoca el patron 2:\n");
-                for (int i = 0; i < contadorOperaciones; i++)
+                cumpleCondicion = 1; //Se cumple que haya hecho un mimo usuario 5 operaciones o más en una hora.
+            
+            
+                // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
+                if (cumpleCondicion == 1)
                 {
-                    printf("Sucursal: "
-                           "%d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
-                           "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
-                           "Importe: %.2f, Estado: %s\n",
-                           registros[i].Sucursal, registros[i].IdOperacion,
-                           registros[i].FECHA_INICIO, registros[i].FECHA_FIN,
-                           registros[i].IdUsuario, registros[i].IdTipoOperacion,
-                           registros[i].NoOperacion, registros[i].Importe,
-                           registros[i].Estado);
-                    registros[i].flag = 1;
+                    printf("\n\nESTE USUARIO HA REALIZADO 3 O MAS RETIROS EN UN DIA:\n");
+                    for (int j = 0; j < num_usuario; j++)
+                    {
+                        printf("\t\tIdOperacion: %s, FECHA_INICIO: %s, IdUsuario: %s, Importe: %f,\n",
+                           Usuarios[j].IdOperacion,
+                           Usuarios[j].FECHA_INICIO,
+                           Usuarios[j].IdUsuario,
+                           Usuarios[j].Importe);
+                    }
+                    num_usuario = 0;
+                    cumpleCondicion  = 0;
                 }
-                printf("FIN PATRON 2\n\n\n\n");
-                cumpleCondicion = false;
             }
-
-            // Reiniciar el contador de operaciones para un nuevo usuario o una nueva
-            // hora
-            contadorOperaciones = 0;
+            //Libero el vector Usuarios dinámico para poder reutilizarlo en un posible siguiente usuario.
+           //printf("Reinicio el user: %s en el num_user: %d con importe: %f\n", Usuarios[num_usuario-1].IdUsuario, num_usuario, Usuarios[num_usuario-1].Importe);
+           free(Usuarios);
+           struct Operacion *Usuarios = NULL;
+           int tamanoInicial = 100; // Tamaño inicial del vector
+           Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
         }
-
+        
         // Actualizar el usuario y el tiempo para la próxima iteración
         strcpy(ultimoUsuario, registros[i].IdUsuario);
-        strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
+        strcpy(ultimoTiempo, registros[i].FECHA_INICIO);        
     }
-
+    sem_post(&mutex2);
     pthread_exit(NULL);
 }
 
 /// --- Pattern 3 ---
-/*
+
+sem_t mutex3;
 void *pattern3(void *arg)
-{
-    /*int contadorOperaciones = 0;
+{ // Inicialización del semáforo
+    sem_init(&mutex3, 0, 1);
+    
+    //Ordeno el vector de "registros" por usuario y fecha a la vez, para pasarle el filtro del patron 1.
+    if (num_registros > 1)
+    {
+        // Ordenar el vector por fecha de inicio y usuario
+        qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros3);
+    }
+    
+    //En Usuarios guardaré los registros que cumplen el patron. (Misma Hora, Mismo Usuario)
+    struct Operacion *Usuarios = NULL;
+    int tamanoInicial = 100; // Tamaño inicial del vector
+    Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
+    
+
+    int num_usuario = 0; 
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
-    bool cumpleCondicion = false;
-
+    sem_wait(&mutex3);
     for (int i = 1; i < num_registros; i++)
     {
+        
         // Verificar si es la misma persona y si la operación está dentro del rango
-        // de una hora
-        if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
-            strcmp(registros[i].Estado, "Error") &&
-            registros[i].flag == 0)
+        // de un día con 3 errores o más
+        if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
+            strcmp(registros[i].Estado, "Error") == 0)
         {
-            reg_patrones[contadorOperaciones] = registros[i];
-            contadorOperaciones++;
-            // Si el usuario realiza 3 o más operaciones de retiro en un mismo día.
-            if (contadorOperaciones >= 3)
-            {
-                cumpleCondicion = true;
-            }
+            //Añadimos las operaciones que pueden cumplir el patron
+            strcpy(Usuarios[num_usuario].IdOperacion, registros[i].IdOperacion);
+            strcpy(Usuarios[num_usuario].FECHA_INICIO, registros[i].FECHA_INICIO);
+            strcpy(Usuarios[num_usuario].FECHA_FIN, registros[i].FECHA_FIN);
+            strcpy(Usuarios[num_usuario].IdUsuario, registros[i].IdUsuario);
+            strcpy(Usuarios[num_usuario].IdTipoOperacion, registros[i].IdTipoOperacion);
+            Usuarios[num_usuario].NoOperacion = registros[i].NoOperacion;
+            Usuarios[num_usuario].Importe = registros[i].Importe;
+            strcpy(Usuarios[num_usuario].Estado, registros[i].Estado);
+            Usuarios[num_usuario].Sucursal = registros[i].Sucursal;
+            Usuarios[num_usuario].DineroIngr = registros[i].DineroIngr;
+            Usuarios[num_usuario].DineroRet = registros[i].DineroRet;
+            Usuarios[num_usuario].flag = registros[i].flag;
+            //printf("\nENTRO num_user: %d USER: %s, Estado: %s ",num_usuario, Usuarios[num_usuario].IdUsuario, Usuarios[num_usuario].Estado);
+            num_usuario++;
+            
         }
-        else
-        {
-            if (cumpleCondicion == true)
-            {
-                printf("Datos de la operacion que provoca el patron 3:\n");
-                for (int i = 0; i < contadorOperaciones; i++)
-                {
-                    printf("Sucursal: "
-                           "%d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
-                           "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
-                           "Importe: %.2f, Estado: %s\n",
-                           registros[i].Sucursal, registros[i].IdOperacion,
-                           registros[i].FECHA_INICIO, registros[i].FECHA_FIN,
-                           registros[i].IdUsuario, registros[i].IdTipoOperacion,
-                           registros[i].NoOperacion, registros[i].Importe,
-                           registros[i].Estado);
-                    // Cambio el flag a 1, para no revisar esta operacion más, porque ya cumplió un patron
-                    registros[i].flag = 1;
+        else if(strcmp(registros[i].IdUsuario, ultimoUsuario) != 0)
+        {   
+            // Hemos pasado al siguiente usuario (o es el ultimo usuario), ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
+            // por lo que toca comprobar si son 3 o más operaciones que cumplen el patron
+            int cumpleCondicion = 0;
+            //El siguiente bucle se usará para comprobar si las operaciones de error sucedieron en el mismo día.
+            int cont = 0;
+            for(int i = 0; i < num_usuario; i++){
+                char fech[20];
+                strcpy(fech,registros[i].FECHA_INICIO);
+                for(int j = 0; j < num_usuario; j++){
+                    if(i != j){
+                        if(enElMismoDía(fech, registros[i].FECHA_INICIO) == 1){
+                            cont++;
+                        }
+                        if(j >= num_usuario && cont<3){
+                            cont = 0;
+                        }else if(cont>2){
+                            break;
+                        }
+                    }
                 }
-                cumpleCondicion = false;
             }
-
-            // Reiniciar el contador de operaciones para un nuevo usuario o una nueva
-            // hora
-            contadorOperaciones = 0;
+            if(cont>2){
+                cumpleCondicion = 1; //Se cumple que haya hecho un mimo usuario 3 operaciones o más en un día con error.
+            
+                // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
+                if (cumpleCondicion == 1)
+                {
+                    printf("\n\nESTE USUARIO HA TENIDO 3 O MAS ERRORES EN UN DIA\n", num_usuario);
+                    for (int j = 0; j < num_usuario; j++)
+                    {
+                        printf("\t\tEstado: %s, FECHA_INICIO: %s, IdUsuario: %s, Importe: %f,\n",
+                           Usuarios[j].Estado,
+                           Usuarios[j].FECHA_INICIO,
+                           Usuarios[j].IdUsuario,
+                           Usuarios[j].Importe);
+                    }
+                    num_usuario = 0;
+                    cumpleCondicion  = 0;
+                }
+            }
+            //Libero el vector Usuarios dinámico para poder reutilizarlo en un posible siguiente usuario.
+           //printf("Reinicio el user: %s en el num_user: %d con importe: %f\n", Usuarios[num_usuario-1].IdUsuario, num_usuario, Usuarios[num_usuario-1].Importe);
+           free(Usuarios);
+           Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
         }
-
+        
         // Actualizar el usuario y el tiempo para la próxima iteración
         strcpy(ultimoUsuario, registros[i].IdUsuario);
-        strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
+        strcpy(ultimoTiempo, registros[i].FECHA_INICIO);        
     }
-
+    sem_post(&mutex3);
     pthread_exit(NULL);
 }
 
 /// --- Pattern 4 ---
-
+sem_t mutex4;
 void *pattern4(void *arg)
 {
+    sem_init(&mutex4, 0, 1);
+    //Ordeno el vector de "registros" por usuario y fecha a la vez, para pasarle el filtro del patron 1.
+    if (num_registros > 1)
+    {
+        // Ordenar el vector por fecha de inicio y usuario
+        qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    }
+
     struct Operacion *Usuarios = NULL; // Vector de estructuras dinámico
     int tamanoInicial = 100;           // Tamaño inicial del vector (puedes ajustarlo según tus necesidades)
     Usuarios = (struct Operacion *)malloc(tamanoInicial * sizeof(struct Operacion));
@@ -1097,72 +1209,64 @@ void *pattern4(void *arg)
     char ultimoTiempo[20];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
     char tipo;
-
+    sem_wait(&mutex4);
     for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un dia
-        if (strcmp(registros[i].IdUsuario, ultimoUsuario) &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+        if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
+            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1)
         {
-
-            strcpy(Usuarios[num_usuarios].IdOperacion, registros[i - 1].IdOperacion);
-            strcpy(Usuarios[num_usuarios].FECHA_INICIO, registros[i - 1].FECHA_INICIO);
-            strcpy(Usuarios[num_usuarios].FECHA_FIN, registros[i - 1].FECHA_FIN);
-            strcpy(Usuarios[num_usuarios].IdUsuario, registros[i - 1].IdUsuario);
-            strcpy(Usuarios[num_usuarios].IdTipoOperacion, registros[i - 1].IdTipoOperacion);
-            Usuarios[num_usuarios].NoOperacion = registros[i - 1].NoOperacion;
-            Usuarios[num_usuarios].Importe = registros[i - 1].Importe;
-            strcpy(Usuarios[num_usuarios].Estado, registros[i - 1].Estado);
-            Usuarios[num_usuarios].Sucursal = registros[i - 1].Sucursal;
-            Usuarios[num_usuarios].DineroIngr = registros[i - 1].DineroIngr;
-            Usuarios[num_usuarios].DineroRet = registros[i - 1].DineroRet;
-            Usuarios[num_usuarios].flag = registros[i - 1].flag;
+            
+            strcpy(Usuarios[num_usuarios].IdOperacion, registros[i].IdOperacion);
+            strcpy(Usuarios[num_usuarios].FECHA_INICIO, registros[i].FECHA_INICIO);
+            strcpy(Usuarios[num_usuarios].FECHA_FIN, registros[i].FECHA_FIN);
+            strcpy(Usuarios[num_usuarios].IdUsuario, registros[i].IdUsuario);
+            strcpy(Usuarios[num_usuarios].IdTipoOperacion, registros[i].IdTipoOperacion);
+            Usuarios[num_usuarios].NoOperacion = registros[i].NoOperacion;
+            Usuarios[num_usuarios].Importe = registros[i].Importe;
+            strcpy(Usuarios[num_usuarios].Estado, registros[i].Estado);
+            Usuarios[num_usuarios].Sucursal = registros[i].Sucursal;
+            Usuarios[num_usuarios].DineroIngr = registros[i].DineroIngr;
+            Usuarios[num_usuarios].DineroRet = registros[i].DineroRet;
+            Usuarios[num_usuarios].flag = registros[i].flag;
             num_usuarios++;
         }
-        else
-        {                                          // Hemos pasado al siguiente usuario, ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
-                                                   // por lo que toca comprobar si el anterior usuario ha hecho o no los 4 tipos de operaciones
-            int cumpleCondicion[4] = {0, 0, 0, 0}; // Vector que me dirá si se han realizado una o más operaciones de cada tipo.
-            int Cumple = 1;                        // Variable de control para comprobar que todas se cumplen.
+        else if(strcmp(registros[i].IdUsuario, ultimoUsuario) != 0)
+        {// Hemos pasado al siguiente usuario, ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
+         // por lo que toca comprobar si el anterior usuario ha hecho o no los 4 tipos de operaciones
+            int cumpleCondicion[4]; // Vector que me dirá si se han realizado una o más operaciones de cada tipo.
+            int Cumple = 1;// Variable de control para comprobar que todas se cumplen. La doy por cierta
             for (int j = 0; j < num_usuarios; j++)
             {
-                tipo = Usuarios[j].IdTipoOperacion[7]; // Tipo guarda el tipo de operación, basándonos en la posicion numero 7 que es la diferencial.
-                switch (tipo)
-                {
-                case '1':
+                if(Usuarios[j].IdOperacion[5] == '1'){
                     cumpleCondicion[0] = 1;
-                case '2':
+                }else if(Usuarios[j].IdOperacion[5] == '2'){
                     cumpleCondicion[1] = 1;
-                case '3':
+                }else if(Usuarios[j].IdOperacion[5] == '3'){
                     cumpleCondicion[2] = 1;
-                case '4':
-                    cumpleCondicion[4] = 1;
                 }
             }
             // Si tras haber analizado todas las operaciones de este usuario hay algun tipo de operacion que no haya sido realizada, Cumple será 0.
-            for (int k = 0; k < 4; k++)
+            for (int k = 0; k < 3; k++)
             {
                 if (cumpleCondicion[k] != 1)
                 {
                     Cumple = 0;
+                    //Reestablezco el vector de comprobación
+                    cumpleCondicion[0] = cumpleCondicion[1] = cumpleCondicion[2] = cumpleCondicion[3] = 0;
                 }
             }
             // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
-            if (Cumple = 1)
+            if (Cumple == 1)
             {
-                printf("Datos de la operacion que provoca el patron 4:\n");
+                //Reestablezco el vector de comprobación
+                cumpleCondicion[0] = cumpleCondicion[1] = cumpleCondicion[2] = cumpleCondicion[3] = 0;
+                printf("ESTE USUARIO HA HECHO UNA OPERACION DE CADA TIPO EN UN DIA:\n");
                 for (int j = 0; j < num_usuarios; j++)
                 {
-                    printf("Sucursal: "
-                           "%d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
-                           "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
-                           "Importe: %.2f, Estado: %s\n",
-                           Usuarios[j].Sucursal, registros[i].IdOperacion,
-                           Usuarios[j].FECHA_INICIO, registros[i].FECHA_FIN,
-                           Usuarios[j].IdUsuario, registros[i].IdTipoOperacion,
-                           Usuarios[j].NoOperacion, registros[i].Importe,
-                           Usuarios[j].Estado);
+                    printf("IdOperacion: %s, ID Usuario: %s, Fecha Inicio: %s\n",
+                    Usuarios[j].IdOperacion, Usuarios[j].IdUsuario, Usuarios[j].FECHA_INICIO);
                 }
                 // Ahora, sabiendo que se cumplió el patron, tengo que cambiar todos los flags de este usuario a 1, para no volver a revisar este patron posteriormente.
                 for (int r = 0; r < num_registros; r++)
@@ -1183,24 +1287,31 @@ void *pattern4(void *arg)
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
-
+    sem_wait(&mutex4);
     pthread_exit(NULL);
 }
-*/
-/// --- Pattern 5 ---
 
+/// --- Pattern 5 ---
+sem_t mutex5;
 void *pattern5(void *arg)
 {
+    sem_init(&mutex5, 0, 1);
+    //Ordeno el vector de "registros" por usuario y fecha a la vez, para pasarle el filtro del patron 1.
+    if (num_registros > 1)
+    {
+        // Ordenar el vector por fecha de inicio y usuario
+        qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
+    }
     int contadorOperaciones = 0;
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
-
+    sem_wait(&mutex5);
     for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
-        // de una hora
+        // de un día
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
@@ -1217,7 +1328,7 @@ void *pattern5(void *arg)
         {
             if (registros[i - 1].DineroRet > registros[i - 1].DineroIngr)
             {
-                printf("El usuario %s ha retirado más dinero del que ha ingresado.",
+                printf("\n\nEl usuario %s ha retirado más dinero del que ha ingresado.\n\n",
                 registros[i - 1].IdUsuario);
                 registros[i].flag = 1;
             }
@@ -1228,59 +1339,40 @@ void *pattern5(void *arg)
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
     // Mostrar los registros ordenados por pantalla
+    sem_post(&mutex5);
 
     pthread_exit(NULL);
 }
 
 int readConsolidatedFile()
 {
+    fflush(stdout);
     int num_registros = 0;
-    char archive[200] = "../output/fich_consolidado.csv";
 
-    // Abrir el archivo en modo lectura y escritura
-    FILE *archivo = fopen(archive, "r+");
-    if (archivo == NULL)
-    {
-        perror("Error al abrir el archivo");
-        pthread_exit(NULL);
-    }
 
     // Bloquear el mutex antes de acceder al archivo
     // pthread_mutex_lock(&mutexPatterns);
 
     // Leer los registros del archivo y almacenarlos en una matriz
-    char linea[MAX_LINE_LENGTH];
-    while (fgets(linea, sizeof(linea), archivo) != NULL)
+    while (num_registros < SharedMemory_ptr->filesCount)
     {
         // Formato fichero consolidado -> ID_SUCURSAL;ID_OPERACIÓN;FECHA_INI;FECHA_FIN;ID_USUARIO;ID_TIPO_OPERACIÓN;NUM_OPERACIÓN;IMPORTE;ESTADO
+        registros[num_registros].Sucursal = SharedMemory_ptr->files->sucursal_number;
+        registros[num_registros].flag = SharedMemory_ptr->files->flag;
 
-        sscanf(linea, "%d;%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f;%[^;];%d",
-               &registros[num_registros].Sucursal,
-               registros[num_registros].IdOperacion,
-               registros[num_registros].FECHA_INICIO,
-               registros[num_registros].FECHA_FIN,
-               registros[num_registros].IdUsuario,
-               registros[num_registros].IdTipoOperacion,
-               &registros[num_registros].NoOperacion,
-               &registros[num_registros].Importe, registros[num_registros].Estado,
-               registros[num_registros].flag);
         registros[num_registros].DineroIngr = 0;
         registros[num_registros].DineroRet = 0;
-        num_registros++;
-    }
+        
 
-    // Cerrar el archivo
-    fclose(archivo);
+        sscanf(SharedMemory_ptr->files[num_registros].line,"%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f€;%[^;]", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, registros[num_registros].IdTipoOperacion, &registros[num_registros].NoOperacion, &registros[num_registros].Importe, registros[num_registros].Estado);
+        num_registros++;
+        
+    }
 
     // Desbloquear el mutex después de acceder al archivo
     // pthread_mutex_unlock(&mutexPatterns);
 
-    if (num_registros > 1)
-    {
-        // Ordenar el vector por fecha de inicio y usuario
-        qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
-    }
-
+    
     return num_registros;
 }
 // Función de apoyo a la función de qsort, para ordenar por usuarios.
@@ -1288,11 +1380,40 @@ int comparar_registros(const void *a, const void *b)
 {
     const struct Operacion *registro1 = (const struct Operacion *)a;
     const struct Operacion *registro2 = (const struct Operacion *)b;
-
-    return strcmp(registro1->IdUsuario, registro2->IdUsuario);
+    int usuario_cmp = strcmp(registro1->IdUsuario, registro2->IdUsuario);
+    if (usuario_cmp != 0) {
+        return usuario_cmp;
+    }
+    struct tm fecha1_tm, fecha2_tm;
+    convertir_fecha(registro1->FECHA_INICIO, &fecha1_tm);
+    convertir_fecha(registro2->FECHA_INICIO, &fecha2_tm);
+    
+    return difftime(mktime(&fecha1_tm), mktime(&fecha2_tm));
 }
-
-
+int comparar_registros3(const void *a, const void *b)
+{
+    const struct Operacion *registro1 = (const struct Operacion *)a;
+    const struct Operacion *registro2 = (const struct Operacion *)b;
+    int usuario_cmp = strcmp(registro1->IdUsuario, registro2->IdUsuario);
+    if (usuario_cmp != 0) {
+        return usuario_cmp;
+    }
+    
+    return strcmp(registro1->Estado, registro2->Estado);
+}
+// Función para convertir fecha de "DD/MM/YYYY HH:MM" a struct tm
+void convertir_fecha(const char* fecha_str, struct tm* fecha_tm) {
+    sscanf(fecha_str, "%2d/%2d/%4d%2d:%2d", 
+           &fecha_tm->tm_mday, 
+           &fecha_tm->tm_mon, 
+           &fecha_tm->tm_year, 
+           &fecha_tm->tm_hour, 
+           &fecha_tm->tm_min);
+    fecha_tm->tm_mon -= 1;      // Ajustar el mes
+    fecha_tm->tm_year -= 1900;  // Ajustar el año
+    fecha_tm->tm_sec = 0;
+    fecha_tm->tm_isdst = -1;    // No considerar horario de verano
+}
 // Función para verificar si se superan las 5 operaciones por hora
 int enElMismoDía(char *fecha1, char *fecha2)
 {
