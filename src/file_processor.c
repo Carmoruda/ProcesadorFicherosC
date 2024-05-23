@@ -216,7 +216,6 @@ void StartAudit() {
     // Proceso comprobar patrones
     pid_t proceso_patrones;
     pid_t proceso_cerrar;
-
     proceso_patrones = fork();
     if (proceso_patrones != 0) { // Proceso padre -> Proceso de procesar ficheros
         printf("\n****************************************\n");
