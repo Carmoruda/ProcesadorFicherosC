@@ -23,10 +23,6 @@ pthread_mutex_t mutex;        // Mutex para la exclusión mutua
 pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
 sem_t sem_thread_creation;    // Semáforo para controlar la creación de hilos
 
-// Variables memoria compartida
-int IDSharedMemory;
-shared_memory *SharedMemory_ptr;
-
 /// @brief Estructura que contiene la información sobre una línea de
 /// un fichero de la sucursal.
 typedef struct sucursal_info
@@ -75,6 +71,10 @@ struct config_file
     int simulate_sleep_min;   // Tiempo mínimo de simulación
     int size_fp;              // Tamaño máximo de la memoria compartida
 } config_file;
+
+// Variables memoria compartida
+int IDSharedMemory;
+shared_memory *SharedMemory_ptr;
 
 /// @brief Leer la información del archivo de configuración
 /// @param pf_config Archivo de configuración
