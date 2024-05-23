@@ -785,6 +785,8 @@ int enElMismoDía(char *fecha1, char *fecha2);
 /// @return Devuelve el número de operaciones que hay en el consolidado.
 int readConsolidatedFile();
 
+void convertir_fecha(const char* fecha_str, struct tm* fecha_tm) ;
+
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
     
@@ -825,59 +827,73 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
 void *pattern1(void *arg)
 {
-    int contadorOperaciones = 0;
+    struct Operacion *Usuarios = NULL; // Vector de estructuras dinámico para recoger las operaciones del usuario que cumple la condición
+    int tamanoInicial = 100;           // Tamaño inicial del vector
+    Usuarios = (struct Operacion *)malloc(tamanoInicial * sizeof(struct Operacion));
+
+    int num_usuario = 1; //Se inicializa a 1, porque empiezo a contar a partir de cuando dos operacciones son hechas por el mismo usuario en 1 hora
+
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
-    bool cumpleCondicion = false;
-    sleep(10);
+    for(int i = 0; i < num_registros; i++){
+        printf("PATRON 1: %s %s\n", 
+        registros[i].IdUsuario, registros[i].FECHA_INICIO);
+    }
     for (int i = 1; i < num_registros; i++)
     {
+        //printf("Usuario actual y anterior :%s y %s\n", registros[i].IdUsuario, ultimoUsuario);
+        //printf("Tiempo actual y anterior :%s y %s\n", registros[i].FECHA_INICIO, ultimoTiempo);
+        sleep(1);
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora, y si el flag está a 0
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
             enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
-            reg_patrones[contadorOperaciones] = registros[i];
-            contadorOperaciones++;
-            // Si el usuario realiza 5 o más operaciones dentro de una hora, hacer
-            // algo
-            if (contadorOperaciones > 2)
-            {
-                cumpleCondicion = true;
-
-            }
+            printf("Cumplo 1 vez;");
+            strcpy(Usuarios[num_usuario].IdOperacion, registros[i - 1].IdOperacion);
+            strcpy(Usuarios[num_usuario].FECHA_INICIO, registros[i - 1].FECHA_INICIO);
+            strcpy(Usuarios[num_usuario].FECHA_FIN, registros[i - 1].FECHA_FIN);
+            strcpy(Usuarios[num_usuario].IdUsuario, registros[i - 1].IdUsuario);
+            strcpy(Usuarios[num_usuario].IdTipoOperacion, registros[i - 1].IdTipoOperacion);
+            Usuarios[num_usuario].NoOperacion = registros[i - 1].NoOperacion;
+            Usuarios[num_usuario].Importe = registros[i - 1].Importe;
+            strcpy(Usuarios[num_usuario].Estado, registros[i - 1].Estado);
+            Usuarios[num_usuario].Sucursal = registros[i - 1].Sucursal;
+            Usuarios[num_usuario].DineroIngr = registros[i - 1].DineroIngr;
+            Usuarios[num_usuario].DineroRet = registros[i - 1].DineroRet;
+            Usuarios[num_usuario].flag = registros[i - 1].flag;
+            num_usuario++;
         }
-        else 
+        else if(strcmp(registros[i].IdUsuario, ultimoUsuario) == 1)
         {
-            if (cumpleCondicion == true)
-            {
-                int k = 0;
-                printf("Datos de la operacion que provoca el patron 1:\n");
-                for (int j = i; k < contadorOperaciones; j--)
-                {
-                    printf("Sucursal: %d,IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
-                           "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
-                           "Importe: %.2f, Estado: %s\n",
-                           registros[j].Sucursal, registros[j].IdOperacion,
-                           registros[j].FECHA_INICIO, registros[j].FECHA_FIN,
-                           registros[j].IdUsuario, registros[j].IdTipoOperacion,
-                           registros[j].NoOperacion, registros[j].Importe,
-                           registros[j].Estado);
-                        // Cambio el flag a 1 para evitar que se repita el patron incesablemente.
-                        registros[j].flag = 1;
-
-                        k++;
-                }
-
-                printf("FIN DEL PATRON\n\n\n\n");
-                cumpleCondicion = false;
+            // Hemos pasado al siguiente usuario, ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
+            // por lo que toca comprobar si el anterior usuario ha hecho o no los 4 tipos de operaciones
+            int cumpleCondicion = 0; // VAriable que me dirá si se han realizado 5 operaciones en una hora o más.
+                                 // Variable de control para comprobar que todas se cumplen.
+            if(num_usuario >= 5){
+                cumpleCondicion = 1; //Se cumple que haya hecho un mimo usuario 5 operaciones o más en una hora.
+            }else{
+                free(Usuarios);
             }
-
-            // Reiniciar el contador de operaciones para un nuevo usuario o una nueva
-            // hora
-            contadorOperaciones = 0;
+            
+            // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
+            if (cumpleCondicion = 1)
+            {
+                printf("\n\nDatos de la operacion que provoca el patron 1:\n");
+                for (int j = 0; j < num_usuario; j++)
+                {
+                    printf("IdOperacion: %s, FECHA_INICIO: %s, FECHA_FIN: %s, "
+                           "IdUsuario: %s, IdTipoOperacion: %s, NoOperacion: %d, "
+                           "Importe: %f, Estado: %s\n",
+                           Usuarios[j].IdOperacion,
+                           Usuarios[j].FECHA_INICIO, Usuarios[j].FECHA_FIN,
+                           Usuarios[j].IdUsuario, Usuarios[j].IdTipoOperacion,
+                           Usuarios[j].NoOperacion, Usuarios[j].Importe,
+                           Usuarios[j].Estado);
+                }
+            }
         }
 
         // Actualizar el usuario y el tiempo para la próxima iteración
@@ -1202,19 +1218,12 @@ int readConsolidatedFile()
     {
         // Ordenar el vector por fecha de inicio y usuario
         qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
-        qsort(registros, num_registros, sizeof(struct Operacion), comparar_por_fecha_inicio);
     }
     for(int i = 0; i < num_registros; i++){
-        printf("SI SOY %s %s %s %s %s %d %f %s\n", 
-        registros[i].IdOperacion,
-        registros[i].FECHA_INICIO,
-        registros[i].FECHA_FIN,
-        registros[i].IdUsuario,
-        registros[i].IdTipoOperacion,
-        registros[i].NoOperacion,
-        registros[i].Importe,
-        registros[i].Estado);
+        printf("ORDENADO: %s %s\n", 
+        registros[i].IdUsuario, registros[i].FECHA_INICIO);
     }
+    printf("\n\n\n\n");
     return num_registros;
 }
 // Función de apoyo a la función de qsort, para ordenar por usuarios.
@@ -1222,16 +1231,29 @@ int comparar_registros(const void *a, const void *b)
 {
     const struct Operacion *registro1 = (const struct Operacion *)a;
     const struct Operacion *registro2 = (const struct Operacion *)b;
-
-    return strcmp(registro1->IdUsuario, registro2->IdUsuario);
+    int usuario_cmp = strcmp(registro1->IdUsuario, registro2->IdUsuario);
+    if (usuario_cmp != 0) {
+        return usuario_cmp;
+    }
+    struct tm fecha1_tm, fecha2_tm;
+    convertir_fecha(registro1->FECHA_INICIO, &fecha1_tm);
+    convertir_fecha(registro2->FECHA_INICIO, &fecha2_tm);
+    
+    return difftime(mktime(&fecha1_tm), mktime(&fecha2_tm));
 }
-// Función de comparación para ordenar por fecha de inicio
-int comparar_por_fecha_inicio(const void *a, const void *b) {
-  const struct Operacion *op1 = (const struct Operacion *)a;
-  const struct Operacion *op2 = (const struct Operacion *)b;
-  return strcmp(op1->FECHA_INICIO, op2->FECHA_INICIO);
+// Función para convertir fecha de "DD/MM/YYYY HH:MM" a struct tm
+void convertir_fecha(const char* fecha_str, struct tm* fecha_tm) {
+    sscanf(fecha_str, "%2d/%2d/%4d%2d:%2d", 
+           &fecha_tm->tm_mday, 
+           &fecha_tm->tm_mon, 
+           &fecha_tm->tm_year, 
+           &fecha_tm->tm_hour, 
+           &fecha_tm->tm_min);
+    fecha_tm->tm_mon -= 1;      // Ajustar el mes
+    fecha_tm->tm_year -= 1900;  // Ajustar el año
+    fecha_tm->tm_sec = 0;
+    fecha_tm->tm_isdst = -1;    // No considerar horario de verano
 }
-
 // Función para verificar si se superan las 5 operaciones por hora
 int enElMismoDía(char *fecha1, char *fecha2)
 {
