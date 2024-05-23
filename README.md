@@ -2,6 +2,15 @@
 
 ## Instalación y ejecución
 
+Para obtener el código fuente del proyecto, ejecute el siguiente comando en su terminal:
+
+```bash
+1. git clone https://github.com/Carmoruda/ProcesadorFicherosC.git
+2. cd ./ProcesadorFicherosC/src
+3. ./make
+4. ./fileprocessor
+```
+
 ## Estructura de directorios
 
 ```bash
@@ -27,10 +36,10 @@ Nombre del proyecto/
 │   ├── fich_log.log
 │   └── fich_consolidado.csv
 ├── src/
-│   ├── check_patterns.c
 │   ├── create_structure.sh
+│   ├── create_users.sh
 │   ├── file_processor.c
-│   ├── file_processor (ejecutable)
+│   ├── fileprocessor (ejecutable)
 │   ├── make
 │   └── show_information.c
 ├── tests/
