@@ -287,7 +287,7 @@ void CloseTriggered(int signal)
     printf("\nConsolidando memoria antes de salir...\n");
     printf("Líneas en MC: %d", SharedMemory_ptr->filesCount);
     ConsolidateMemory(SharedMemory_ptr, config_file.inventory_file);
-    printf("Ficheros consolidados correctamente en %s.\n", config_file.inventory_file);
+    printf("\nFicheros consolidados correctamente en %s.\n", config_file.inventory_file);
     exit(0);
 }
 
@@ -310,21 +310,21 @@ int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedM
     __key_t smkey = ftok("../output/fich_consolidado.csv", 7);
     if (smkey == -1)
     {
-        printf("Error al generar key MC.");
+        printf("Error al generar key MC.\n");
         return -1;
     }
     // Se crea la zona de memoria compartida
     *idSharedMemory = shmget(smkey, size, IPC_CREAT | 0666);
     if (*idSharedMemory == -1)
     {
-        printf("Error al crear la zona de memoria compartida.");
+        printf("Error al crear la zona de memoria compartida.\n");
         return -1;
     }
     // Se asigna la memoria compartida
     *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
     if (*sharedMemory_ptr == (void *)-1)
     {
-        printf("Error asignando MC.");
+        printf("Error asignando MC.\n");
         return -1;
     }
     // Se incializa la memoria de la MC
@@ -411,7 +411,7 @@ void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, 
     if ((*sharedMemory_ptr)->filesCount == 3)
     {
         ConsolidateMemory(*sharedMemory_ptr, config_file.inventory_file);
-        printf("Ficheros consolidados en %s", config_file.inventory_file);
+        printf("\nFicheros consolidados en %s\n", config_file.inventory_file);
     }
 }
 
@@ -421,7 +421,7 @@ void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *Consolidated
 
     if (consolidated_ptr == NULL)
     {
-        perror("Error al abrir el archivo consolidado");
+        perror("Error al abrir el archivo consolidado\n");
         return;
     }
 
