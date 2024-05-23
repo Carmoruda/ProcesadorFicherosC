@@ -22,18 +22,18 @@ pthread_mutex_t mutex;        // Mutex para la exclusión mutua
 pthread_mutex_t mutexLogFile; // Mutex para el escritura en el archivo de log
 sem_t sem_thread_creation;    // Semáforo para controlar la creación de hilos
 
-typedef struct sucursal_info{
-  char sucursal_number;
-  char line[300];
-  int flag;
-}sucursal_info;
+typedef struct sucursal_info {
+    char sucursal_number;
+    char line[300];
+    int flag;
+} sucursal_info;
 
 typedef struct {
-  size_t mcSize;
-  size_t usedSize;
-  int filesCount;
-  sucursal_info files[];
-}shared_memory;
+    size_t mcSize;
+    size_t usedSize;
+    int filesCount;
+    sucursal_info files[];
+} shared_memory;
 
 /// @brief Estructura que contiene la información de los archivos de las
 /// sucursales
@@ -126,7 +126,7 @@ void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, 
 
 /// @brief Copia la información de la memoria compartida en el archivo csv
 /// @param sharedMemory_ptr Puntero a la memoria compartida
-/// @param ConsolidatedPath Localización del csv consolidado 
+/// @param ConsolidatedPath Localización del csv consolidado
 void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *ConsolidatedPath);
 
 /// @brief Llama a ConsolidateMemory al hacer Ctrl + C
@@ -150,7 +150,7 @@ int main()
 
     signal(SIGINT, CloseTriggered);
 
-    if(CreateSharedMemory(config_file.size_fp, &IDSharedMemory, &SharedMemory_ptr) == -1){
+    if(CreateSharedMemory(config_file.size_fp, &IDSharedMemory, &SharedMemory_ptr) == -1) {
         printf("Error al crear la memoria virtual.");
         return EXIT_FAILURE;
     }
@@ -215,7 +215,7 @@ void StartAudit()
     }
 }
 
-void CloseTriggered(int signal){
+void CloseTriggered(int signal) {
     printf("\nConsolidando memoria antes de salir...\n");
     printf("Líneas en MC: %d", SharedMemory_ptr->filesCount);
     ConsolidateMemory(SharedMemory_ptr, config_file.inventory_file);
@@ -223,29 +223,29 @@ void CloseTriggered(int signal){
     exit(0);
 }
 
-int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr){
-  //Se crea la key
-  __key_t smkey = ftok("../output/fich_consolidado.csv", 7);
-  if(smkey == -1){
-    printf("Error al generar key MC.");
-    return -1;
-  }
-  //Se crea la zona de memoria compartida
-  *idSharedMemory = shmget(smkey, size, IPC_CREAT | 0666);
-  if(*idSharedMemory == -1){
-    printf("Error al crear la zona de memoria compartida.");
-    return -1;
-  }
-  //Se asigna la memoria compartida
-  *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
-  if(*sharedMemory_ptr == (void *)-1){
-    printf("Error asignando MC.");
-    return -1;
-  }
-  //Se incializa la memoria de la MC
-  (*sharedMemory_ptr)->mcSize = size;
-  (*sharedMemory_ptr)->filesCount = 0;
-  (*sharedMemory_ptr)->usedSize = 0;
+int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr) {
+    //Se crea la key
+    __key_t smkey = ftok("../output/fich_consolidado.csv", 7);
+    if(smkey == -1) {
+        printf("Error al generar key MC.");
+        return -1;
+    }
+    //Se crea la zona de memoria compartida
+    *idSharedMemory = shmget(smkey, size, IPC_CREAT | 0666);
+    if(*idSharedMemory == -1) {
+        printf("Error al crear la zona de memoria compartida.");
+        return -1;
+    }
+    //Se asigna la memoria compartida
+    *sharedMemory_ptr = (shared_memory *)shmat(*idSharedMemory, NULL, 0);
+    if(*sharedMemory_ptr == (void *)-1) {
+        printf("Error asignando MC.");
+        return -1;
+    }
+    //Se incializa la memoria de la MC
+    (*sharedMemory_ptr)->mcSize = size;
+    (*sharedMemory_ptr)->filesCount = 0;
+    (*sharedMemory_ptr)->usedSize = 0;
 
     return 0;
 }
@@ -254,7 +254,7 @@ int ResizeSharedMemory(int *idSharedMemory, size_t newSize, shared_memory **shar
     // Guardar el tamaño usado anteriormente y el número de archivos
     size_t prevUsedSize = (*sharedMemory_ptr)->usedSize;
     int filesCount = (*sharedMemory_ptr)->filesCount;
-    
+
     // Guardar un puntero a la memoria compartida actual
     shared_memory *oldMemory_ptr = *sharedMemory_ptr;
 
@@ -310,7 +310,7 @@ void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, 
             return;
         }
     }
-    
+
     (*sharedMemory_ptr)->files[(*sharedMemory_ptr)->filesCount] = sucInfo;
     (*sharedMemory_ptr)->usedSize += sizeof(sucInfo);
     (*sharedMemory_ptr)->filesCount++;
@@ -320,7 +320,7 @@ void AddDataSharedMemory(int *idSharedMemory, shared_memory **sharedMemory_ptr, 
         ConsolidateMemory(*sharedMemory_ptr, config_file.inventory_file);
         printf("Ficheros consolidados en %s", config_file.inventory_file);
     }
-    
+
 }
 
 void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *ConsolidatedPath) {
@@ -523,7 +523,7 @@ void *verifyNewFile(void *folder_struct)
     fileDescriptor = inotify_init();
 
     if (fileDescriptor < 0)
-    { // Se comprueba que se inicialice el descriptor
+    {   // Se comprueba que se inicialice el descriptor
         printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_DESCRIPTOR_ERROR, INOTIFY_DESCRIPTOR_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -532,7 +532,7 @@ void *verifyNewFile(void *folder_struct)
     watchDescriptor = inotify_add_watch(fileDescriptor, ((sucursal_dir *)folder_struct)->folder_name, IN_CREATE);
 
     if (watchDescriptor < 0)
-    { // Se comprueba que se inicialice el watcher
+    {   // Se comprueba que se inicialice el watcher
         printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_WATCHER_ERROR, INOTIFY_WATCHER_ERROR);
         exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
     }
@@ -547,7 +547,7 @@ void *verifyNewFile(void *folder_struct)
         length = read(fileDescriptor, buffer, BUFFER_LENGTH);
 
         if (length < 0)
-        { // Se comprueba que se inicialice correctamente
+        {   // Se comprueba que se inicialice correctamente
             printLogScreen(mutexLogFile, config_file.log_file, INOTIFY_LENGTH_ERROR, INOTIFY_LENGTH_ERROR);
             exit(EXIT_FAILURE); // Si no se inincializa, avisa y finaliza el proceso con error
         }
@@ -791,7 +791,7 @@ void convertir_fecha(const char* fecha_str, struct tm* fecha_tm) ;
 
 int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *consolidated_file)
 {
-    
+
     fflush(stdout);
     mutexLog = mutexLogFile;
     pthread_t th_pattern1, th_pattern2, th_pattern3, th_pattern4, th_pattern5;
@@ -807,7 +807,7 @@ int checkPatternsProcess(pthread_mutex_t mutexLogFile, char *log_file, char *con
 
     while (1)
     {
-        
+
         num_registros = readConsolidatedFile();
 
         pthread_create(&th_pattern1, NULL, pattern1, NULL);
@@ -840,19 +840,19 @@ void *pattern1(void *arg)
         // Ordenar el vector por fecha de inicio y usuario
         qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros);
     }
-    
+
     //En Usuarios guardaré los registros que cumplen el patron. (Misma Hora, Mismo Usuario)
     struct Operacion *Usuarios = NULL;
     int tamanoInicial = 100; // Tamaño inicial del vector
     Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
-    
 
-    int num_usuario = 0; 
+
+    int num_usuario = 0;
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
-    
+
     for (int i = 1; i < num_registros; i++)
     {
         //printf("Usuario actual y anterior :%s y %s\n", registros[i].IdUsuario, ultimoUsuario);
@@ -861,7 +861,7 @@ void *pattern1(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de una hora, y si el flag está a 0
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+                enLaMismaHora(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             strcpy(Usuarios[num_usuario].IdOperacion, registros[i - 1].IdOperacion);
             strcpy(Usuarios[num_usuario].FECHA_INICIO, registros[i - 1].FECHA_INICIO);
@@ -876,38 +876,38 @@ void *pattern1(void *arg)
             Usuarios[num_usuario].DineroRet = registros[i - 1].DineroRet;
             Usuarios[num_usuario].flag = registros[i - 1].flag;
             num_usuario++;
-            
+
         }
         else if(strcmp(registros[i].IdUsuario, ultimoUsuario) == 1 || i == num_registros)
-        {   
+        {
             // Hemos pasado al siguiente usuario (o es el ultimo usuario), ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
             // por lo que toca comprobar si el anterior usuario ha hecho o no 5 o más operaciones en una hora
             int cumpleCondicion = 0; // Variable que me dirá si se han realizado 5 operaciones en una hora o más.
             if(num_usuario > 4)
             {
                 cumpleCondicion = 1; //Se cumple que haya hecho un mimo usuario 5 operaciones o más en una hora.
-            
-            
+
+
                 // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
                 if (cumpleCondicion == 1)
                 {
                     printf("\n\nESTE USUARIO HA HECHO 5 O MAS MOVIMIENTOS EN UNA HORA:\n");
                     for (int j = 0; j < num_usuario; j++)
                     {
-                        printf("IdUsuario: %s, FECHA_INICIO: %s",                           
-                           Usuarios[j].IdUsuario,
-                           Usuarios[j].FECHA_INICIO);
+                        printf("IdUsuario: %s, FECHA_INICIO: %s",
+                               Usuarios[j].IdUsuario,
+                               Usuarios[j].FECHA_INICIO);
                     }
                     cumpleCondicion  = 0;
                 }
             }
             //Libero el vector Usuarios dinámico para poder reutilizarlo en un posible siguiente usuario.
-           free(Usuarios);
-           struct Operacion *Usuarios = NULL;
-           int tamanoInicial = 100; // Tamaño inicial del vector
-           Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
+            free(Usuarios);
+            struct Operacion *Usuarios = NULL;
+            int tamanoInicial = 100; // Tamaño inicial del vector
+            Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
         }
-        
+
         // Actualizar el usuario y el tiempo para la próxima iteración
         strcpy(ultimoUsuario, registros[i].IdUsuario);
         strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
@@ -921,7 +921,7 @@ void *pattern1(void *arg)
 sem_t mutex2;
 void *pattern2(void *arg)
 {
-     // Inicialización del semáforo
+    // Inicialización del semáforo
     sem_init(&mutex2, 0, 1);
     sem_wait(&mutex2);
     //Ordeno el vector de "registros" por usuario y fecha a la vez, para pasarle el filtro del patron 1.
@@ -934,21 +934,21 @@ void *pattern2(void *arg)
     struct Operacion *Usuarios = NULL;
     int tamanoInicial = 100; // Tamaño inicial del vector
     Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
-    
 
-    int num_usuario = 0; 
+
+    int num_usuario = 0;
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
     strcpy(ultimoTiempo, registros[0].FECHA_INICIO);
-    
+
     for (int i = 1; i < num_registros; i++)
     {
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un día y si se ha realizado un retiro
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
-            registros[i].Importe < 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 &&
+                registros[i].Importe < 0)
         {
             //Añadimos las operaciones que pueden cumplir el patron
             strcpy(Usuarios[num_usuario].IdOperacion, registros[i].IdOperacion);
@@ -965,11 +965,11 @@ void *pattern2(void *arg)
             Usuarios[num_usuario].flag = registros[i].flag;
             //printf("\nENTRO num_user: %d USER: %s, IMPORTE: %f ",num_usuario, Usuarios[num_usuario].IdUsuario, Usuarios[num_usuario].Importe);
             num_usuario++;
-            
+
         }
         else if(strcmp(registros[i].IdUsuario, ultimoUsuario) != 0)
-        {   
-             //printf("\nNO ENTRO num_user: %d USER: %s, IMPORTE: %f ",num_usuario, registros[i].IdUsuario, registros[i].Importe);
+        {
+            //printf("\nNO ENTRO num_user: %d USER: %s, IMPORTE: %f ",num_usuario, registros[i].IdUsuario, registros[i].Importe);
 
             // Hemos pasado al siguiente usuario (o es el ultimo usuario), ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
             // por lo que toca comprobar si el anterior usuario ha hecho o no 5 o más operaciones en una hora
@@ -977,8 +977,8 @@ void *pattern2(void *arg)
             if(num_usuario > 1)
             {
                 cumpleCondicion = 1; //Se cumple que haya hecho un mimo usuario 5 operaciones o más en una hora.
-            
-            
+
+
                 // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
                 if (cumpleCondicion == 1)
                 {
@@ -986,26 +986,26 @@ void *pattern2(void *arg)
                     for (int j = 0; j < num_usuario; j++)
                     {
                         printf("\t\tIdOperacion: %s, FECHA_INICIO: %s, IdUsuario: %s, Importe: %f,\n",
-                           Usuarios[j].IdOperacion,
-                           Usuarios[j].FECHA_INICIO,
-                           Usuarios[j].IdUsuario,
-                           Usuarios[j].Importe);
+                               Usuarios[j].IdOperacion,
+                               Usuarios[j].FECHA_INICIO,
+                               Usuarios[j].IdUsuario,
+                               Usuarios[j].Importe);
                     }
                     num_usuario = 0;
                     cumpleCondicion  = 0;
                 }
             }
             //Libero el vector Usuarios dinámico para poder reutilizarlo en un posible siguiente usuario.
-           //printf("Reinicio el user: %s en el num_user: %d con importe: %f\n", Usuarios[num_usuario-1].IdUsuario, num_usuario, Usuarios[num_usuario-1].Importe);
-           free(Usuarios);
-           struct Operacion *Usuarios = NULL;
-           int tamanoInicial = 100; // Tamaño inicial del vector
-           Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
+            //printf("Reinicio el user: %s en el num_user: %d con importe: %f\n", Usuarios[num_usuario-1].IdUsuario, num_usuario, Usuarios[num_usuario-1].Importe);
+            free(Usuarios);
+            struct Operacion *Usuarios = NULL;
+            int tamanoInicial = 100; // Tamaño inicial del vector
+            Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
         }
-        
+
         // Actualizar el usuario y el tiempo para la próxima iteración
         strcpy(ultimoUsuario, registros[i].IdUsuario);
-        strcpy(ultimoTiempo, registros[i].FECHA_INICIO);        
+        strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
     sem_post(&mutex2);
     pthread_exit(NULL);
@@ -1015,23 +1015,23 @@ void *pattern2(void *arg)
 
 sem_t mutex3;
 void *pattern3(void *arg)
-{ // Inicialización del semáforo
+{   // Inicialización del semáforo
     sem_init(&mutex3, 0, 1);
-    
+
     //Ordeno el vector de "registros" por usuario y fecha a la vez, para pasarle el filtro del patron 1.
     if (num_registros > 1)
     {
         // Ordenar el vector por fecha de inicio y usuario
         qsort(registros, num_registros, sizeof(struct Operacion), comparar_registros3);
     }
-    
+
     //En Usuarios guardaré los registros que cumplen el patron. (Misma Hora, Mismo Usuario)
     struct Operacion *Usuarios = NULL;
     int tamanoInicial = 100; // Tamaño inicial del vector
     Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
-    
 
-    int num_usuario = 0; 
+
+    int num_usuario = 0;
     char ultimoUsuario[100];
     strcpy(ultimoUsuario, registros[0].IdUsuario);
     char ultimoTiempo[100];
@@ -1039,11 +1039,11 @@ void *pattern3(void *arg)
     sem_wait(&mutex3);
     for (int i = 1; i < num_registros; i++)
     {
-        
+
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un día con 3 errores o más
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            strcmp(registros[i].Estado, "Error") == 0)
+                strcmp(registros[i].Estado, "Error") == 0)
         {
             //Añadimos las operaciones que pueden cumplir el patron
             strcpy(Usuarios[num_usuario].IdOperacion, registros[i].IdOperacion);
@@ -1060,34 +1060,34 @@ void *pattern3(void *arg)
             Usuarios[num_usuario].flag = registros[i].flag;
             //printf("\nENTRO num_user: %d USER: %s, Estado: %s ",num_usuario, Usuarios[num_usuario].IdUsuario, Usuarios[num_usuario].Estado);
             num_usuario++;
-            
+
         }
         else if(strcmp(registros[i].IdUsuario, ultimoUsuario) != 0)
-        {   
+        {
             // Hemos pasado al siguiente usuario (o es el ultimo usuario), ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
             // por lo que toca comprobar si son 3 o más operaciones que cumplen el patron
             int cumpleCondicion = 0;
             //El siguiente bucle se usará para comprobar si las operaciones de error sucedieron en el mismo día.
             int cont = 0;
-            for(int i = 0; i < num_usuario; i++){
+            for(int i = 0; i < num_usuario; i++) {
                 char fech[20];
                 strcpy(fech,registros[i].FECHA_INICIO);
-                for(int j = 0; j < num_usuario; j++){
-                    if(i != j){
-                        if(enElMismoDía(fech, registros[i].FECHA_INICIO) == 1){
+                for(int j = 0; j < num_usuario; j++) {
+                    if(i != j) {
+                        if(enElMismoDía(fech, registros[i].FECHA_INICIO) == 1) {
                             cont++;
                         }
-                        if(j >= num_usuario && cont<3){
+                        if(j >= num_usuario && cont<3) {
                             cont = 0;
-                        }else if(cont>2){
+                        } else if(cont>2) {
                             break;
                         }
                     }
                 }
             }
-            if(cont>2){
+            if(cont>2) {
                 cumpleCondicion = 1; //Se cumple que haya hecho un mimo usuario 3 operaciones o más en un día con error.
-            
+
                 // Si la condicion si se cumple, entonces muestro las operaciones del usuario.
                 if (cumpleCondicion == 1)
                 {
@@ -1095,24 +1095,24 @@ void *pattern3(void *arg)
                     for (int j = 0; j < num_usuario; j++)
                     {
                         printf("\t\tEstado: %s, FECHA_INICIO: %s, IdUsuario: %s, Importe: %f,\n",
-                           Usuarios[j].Estado,
-                           Usuarios[j].FECHA_INICIO,
-                           Usuarios[j].IdUsuario,
-                           Usuarios[j].Importe);
+                               Usuarios[j].Estado,
+                               Usuarios[j].FECHA_INICIO,
+                               Usuarios[j].IdUsuario,
+                               Usuarios[j].Importe);
                     }
                     num_usuario = 0;
                     cumpleCondicion  = 0;
                 }
             }
             //Libero el vector Usuarios dinámico para poder reutilizarlo en un posible siguiente usuario.
-           //printf("Reinicio el user: %s en el num_user: %d con importe: %f\n", Usuarios[num_usuario-1].IdUsuario, num_usuario, Usuarios[num_usuario-1].Importe);
-           free(Usuarios);
-           Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
+            //printf("Reinicio el user: %s en el num_user: %d con importe: %f\n", Usuarios[num_usuario-1].IdUsuario, num_usuario, Usuarios[num_usuario-1].Importe);
+            free(Usuarios);
+            Usuarios = (struct Operacion *)calloc(tamanoInicial, sizeof(struct Operacion));
         }
-        
+
         // Actualizar el usuario y el tiempo para la próxima iteración
         strcpy(ultimoUsuario, registros[i].IdUsuario);
-        strcpy(ultimoTiempo, registros[i].FECHA_INICIO);        
+        strcpy(ultimoTiempo, registros[i].FECHA_INICIO);
     }
     sem_post(&mutex3);
     pthread_exit(NULL);
@@ -1147,9 +1147,9 @@ void *pattern4(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un dia
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1)
         {
-            
+
             strcpy(Usuarios[num_usuarios].IdOperacion, registros[i].IdOperacion);
             strcpy(Usuarios[num_usuarios].FECHA_INICIO, registros[i].FECHA_INICIO);
             strcpy(Usuarios[num_usuarios].FECHA_FIN, registros[i].FECHA_FIN);
@@ -1165,17 +1165,17 @@ void *pattern4(void *arg)
             num_usuarios++;
         }
         else if(strcmp(registros[i].IdUsuario, ultimoUsuario) != 0)
-        {// Hemos pasado al siguiente usuario, ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
-         // por lo que toca comprobar si el anterior usuario ha hecho o no los 4 tipos de operaciones
+        {   // Hemos pasado al siguiente usuario, ya que el vector Registros esta ordenado por usuario, e ignora aquellas operaaciones con flag a 1
+            // por lo que toca comprobar si el anterior usuario ha hecho o no los 4 tipos de operaciones
             int cumpleCondicion[4]; // Vector que me dirá si se han realizado una o más operaciones de cada tipo.
             int Cumple = 1;// Variable de control para comprobar que todas se cumplen. La doy por cierta
             for (int j = 0; j < num_usuarios; j++)
             {
-                if(Usuarios[j].IdOperacion[5] == '1'){
+                if(Usuarios[j].IdOperacion[5] == '1') {
                     cumpleCondicion[0] = 1;
-                }else if(Usuarios[j].IdOperacion[5] == '2'){
+                } else if(Usuarios[j].IdOperacion[5] == '2') {
                     cumpleCondicion[1] = 1;
-                }else if(Usuarios[j].IdOperacion[5] == '3'){
+                } else if(Usuarios[j].IdOperacion[5] == '3') {
                     cumpleCondicion[2] = 1;
                 }
             }
@@ -1198,7 +1198,7 @@ void *pattern4(void *arg)
                 for (int j = 0; j < num_usuarios; j++)
                 {
                     printf("IdOperacion: %s, ID Usuario: %s, Fecha Inicio: %s\n",
-                    Usuarios[j].IdOperacion, Usuarios[j].IdUsuario, Usuarios[j].FECHA_INICIO);
+                           Usuarios[j].IdOperacion, Usuarios[j].IdUsuario, Usuarios[j].FECHA_INICIO);
                 }
                 // Ahora, sabiendo que se cumplió el patron, tengo que cambiar todos los flags de este usuario a 1, para no volver a revisar este patron posteriormente.
                 for (int r = 0; r < num_registros; r++)
@@ -1245,7 +1245,7 @@ void *pattern5(void *arg)
         // Verificar si es la misma persona y si la operación está dentro del rango
         // de un día
         if (strcmp(registros[i].IdUsuario, ultimoUsuario) == 0 &&
-            enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
+                enElMismoDía(registros[i].FECHA_INICIO, ultimoTiempo) == 1 && registros[i].flag == 0)
         {
             if (registros[i].Importe > 0)
             {
@@ -1261,7 +1261,7 @@ void *pattern5(void *arg)
             if (registros[i - 1].DineroRet > registros[i - 1].DineroIngr)
             {
                 printf("\n\nEl usuario %s ha retirado más dinero del que ha ingresado.\n\n",
-                registros[i - 1].IdUsuario);
+                       registros[i - 1].IdUsuario);
                 registros[i].flag = 1;
             }
         }
@@ -1294,17 +1294,17 @@ int readConsolidatedFile()
 
         registros[num_registros].DineroIngr = 0;
         registros[num_registros].DineroRet = 0;
-        
+
 
         sscanf(SharedMemory_ptr->files[num_registros].line,"%[^;];%[^;];%[^;];%[^;];%[^;];%d;%f€;%[^;]", registros[num_registros].IdOperacion, registros[num_registros].FECHA_INICIO, registros[num_registros].FECHA_FIN, registros[num_registros].IdUsuario, registros[num_registros].IdTipoOperacion, &registros[num_registros].NoOperacion, &registros[num_registros].Importe, registros[num_registros].Estado);
         num_registros++;
-        
+
     }
 
     // Desbloquear el mutex después de acceder al archivo
     // pthread_mutex_unlock(&mutexPatterns);
 
-    
+
     return num_registros;
 }
 // Función de apoyo a la función de qsort, para ordenar por usuarios.
@@ -1319,7 +1319,7 @@ int comparar_registros(const void *a, const void *b)
     struct tm fecha1_tm, fecha2_tm;
     convertir_fecha(registro1->FECHA_INICIO, &fecha1_tm);
     convertir_fecha(registro2->FECHA_INICIO, &fecha2_tm);
-    
+
     return difftime(mktime(&fecha1_tm), mktime(&fecha2_tm));
 }
 int comparar_registros3(const void *a, const void *b)
@@ -1330,16 +1330,16 @@ int comparar_registros3(const void *a, const void *b)
     if (usuario_cmp != 0) {
         return usuario_cmp;
     }
-    
+
     return strcmp(registro1->Estado, registro2->Estado);
 }
 // Función para convertir fecha de "DD/MM/YYYY HH:MM" a struct tm
 void convertir_fecha(const char* fecha_str, struct tm* fecha_tm) {
-    sscanf(fecha_str, "%2d/%2d/%4d%2d:%2d", 
-           &fecha_tm->tm_mday, 
-           &fecha_tm->tm_mon, 
-           &fecha_tm->tm_year, 
-           &fecha_tm->tm_hour, 
+    sscanf(fecha_str, "%2d/%2d/%4d%2d:%2d",
+           &fecha_tm->tm_mday,
+           &fecha_tm->tm_mon,
+           &fecha_tm->tm_year,
+           &fecha_tm->tm_hour,
            &fecha_tm->tm_min);
     fecha_tm->tm_mon -= 1;      // Ajustar el mes
     fecha_tm->tm_year -= 1900;  // Ajustar el año
