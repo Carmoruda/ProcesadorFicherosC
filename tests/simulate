@@ -45,7 +45,6 @@ if [ "${type_operation//[^0-9]/}" -gt 4 ]; then
   type_operation=$(printf "OPE%03d" "$type_operation")
 fi
 
-
 if [[ -z $lines || -z $sucursal_number || -z $type_operation || -z $user_number ]]; then
   echo "All arguments are mandatory. Use -h to see available options"
   exit 1
@@ -77,19 +76,14 @@ for ((i = 1; i <= lines; i++)); do
   output+="$type_operation;$(date '+%d/%m/%Y%H:%M');$(date '+%d/%m/%Y%H:%M');USER00$(($RANDOM % user_number + 1));$operationId;$((RANDOM % 10));$sign$((RANDOM % 1000)).$(printf "%02d" $((RANDOM % 100)))€;$state\n"
 done
 
-
-if [ "$sucursal_number" == "SU001" ]
-then
-  echo -e "$output" > "../files_data/SUC001/$filename"
-elif [ "$sucursal_number" == "SU002" ]
-then
-  echo -e "$output" > "../files_data/SUC002/$filename"
-elif [ "$sucursal_number" == "SU003" ]
-then
-  echo -e "$output" > "../files_data/SUC003/$filename"
-elif [ "$sucursal_number" == "SU004" ]
-then
-  echo -e "$output" > "../files_data/SUC004/$filename"
+if [ "$sucursal_number" == "SU001" ]; then
+  echo -e "$output" >"../files_data/SUC001/$filename"
+elif [ "$sucursal_number" == "SU002" ]; then
+  echo -e "$output" >"../files_data/SUC002/$filename"
+elif [ "$sucursal_number" == "SU003" ]; then
+  echo -e "$output" >"../files_data/SUC003/$filename"
+elif [ "$sucursal_number" == "SU004" ]; then
+  echo -e "$output" >"../files_data/SUC004/$filename"
 fi
 
 echo "$filenamecreated"
