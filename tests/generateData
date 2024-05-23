@@ -40,7 +40,7 @@ while getopts ":l:s:t:u:h" opt; do
   esac
 done
 
-if [ ${type_operation//[^0-9]/} -gt 4 ]; then
+if [ "${type_operation//[^0-9]/}" -gt 4 ]; then
   type_operation=$((type_operation / 4 + 1))
   type_operation=$(printf "OPE%03d" "$type_operation")
 fi
@@ -78,18 +78,18 @@ for ((i = 1; i <= lines; i++)); do
 done
 
 
-if [ $sucursal_number == "SU001" ]
+if [ "$sucursal_number" == "SU001" ]
 then
-  echo -e $output > "../files_data/SUC001/$filename"
-elif [ $sucursal_number == "SU002" ]
+  echo -e "$output" > "../files_data/SUC001/$filename"
+elif [ "$sucursal_number" == "SU002" ]
 then
-  echo -e $output > "../files_data/SUC002/$filename"
-elif [ $sucursal_number == "SU003" ]
+  echo -e "$output" > "../files_data/SUC002/$filename"
+elif [ "$sucursal_number" == "SU003" ]
 then
-  echo -e $output > "../files_data/SUC003/$filename"
-elif [ $sucursal_number == "SU004" ]
+  echo -e "$output" > "../files_data/SUC003/$filename"
+elif [ "$sucursal_number" == "SU004" ]
 then
-  echo -e $output > "../files_data/SUC004/$filename"
+  echo -e "$output" > "../files_data/SUC004/$filename"
 fi
 
 echo "$filename created"
