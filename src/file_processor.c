@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <signal.h>
+#include <termios.h>
 
 pthread_cond_t cond;          // Variable de condición de los hilos
 pthread_mutex_t mutex;        // Mutex para la exclusión mutua
@@ -133,6 +134,19 @@ void ConsolidateMemory(shared_memory *sharedMemory_ptr, const char *Consolidated
 /// @param signal Señal SIGINT
 void CloseTriggered(int signal);
 
+/// @brief Lee la pulsación de una tecla
+/// @return Devuelve la tecla pulsada
+int getch();
+
+/// @brief Función para configurar el terminal sin eco y sin búfer
+void SetUpTerminal();
+
+///@brief Función para restaurar el modo de terminal original
+void RestoreTerminal();
+
+/// @brief Espera que el espacio sea pulsado para finalizar el programa
+void WaitSpace();
+
 //Variables memoria compartida
 int IDSharedMemory;
 shared_memory *SharedMemory_ptr;
@@ -149,6 +163,7 @@ int main()
     bool isProgramRunning = true;
 
     signal(SIGINT, CloseTriggered);
+    signal(SIGUSR1, CloseTriggered);
 
     if(CreateSharedMemory(config_file.size_fp, &IDSharedMemory, &SharedMemory_ptr) == -1){
         printf("Error al crear la memoria virtual.");
@@ -197,22 +212,60 @@ int main()
     return 0;
 }
 
-void StartAudit()
-{
+void StartAudit() {
     // Proceso comprobar patrones
     pid_t proceso_patrones;
+    pid_t proceso_cerrar;
 
     proceso_patrones = fork();
-    if (proceso_patrones != 0) // Proceso padre -> Proceso de procesar ficheros
-    {
+    if (proceso_patrones != 0) { // Proceso padre -> Proceso de procesar ficheros
+        printf("\n****************************************\n");
+        printf("\nPresione SPACE para detener el programa.\n");
+        printf("\n****************************************\n");
+
+        proceso_cerrar = fork();
+        if (proceso_cerrar == 0) { // Proceso hijo -> Controlar cierre
+            WaitSpace();
+        }
+
         processFilesProcess();
+
+        // Esperar a que el proceso de control de cierre termine
+        waitpid(proceso_cerrar, NULL, 0);
     }
 
-    if (proceso_patrones == 0) // Proceso hijo -> Proceso de comprobar patrones
-    {
-        printf("SOY EL HIJO\n");
+    if (proceso_patrones == 0) { // Proceso hijo -> Proceso de comprobar patrones
         checkPatternsProcess(mutexLogFile, config_file.log_file, config_file.inventory_file);
     }
+}
+
+void WaitSpace (){
+    SetUpTerminal();
+    while (1) {
+        int ch = getchar();
+        if (ch == ' ') {
+            kill(getppid(), SIGUSR1); // Enviar señal al proceso padre
+            break;
+        }
+    }
+    RestoreTerminal();
+    exit(0);
+}
+
+void SetUpTerminal() {
+    struct termios new_termios;
+    tcgetattr(0, &new_termios);
+    new_termios.c_lflag &= ~ICANON;
+    new_termios.c_lflag &= ~ECHO;
+    tcsetattr(0, TCSANOW, &new_termios);
+}
+
+void RestoreTerminal() {
+    struct termios old_termios;
+    tcgetattr(0, &old_termios);
+    old_termios.c_lflag |= ICANON;
+    old_termios.c_lflag |= ECHO;
+    tcsetattr(0, TCSANOW, &old_termios);
 }
 
 void CloseTriggered(int signal){
@@ -221,6 +274,18 @@ void CloseTriggered(int signal){
     ConsolidateMemory(SharedMemory_ptr, config_file.inventory_file);
     printf("Ficheros consolidados correctamente en %s.\n", config_file.inventory_file);
     exit(0);
+}
+
+int getch() {
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
 }
 
 int CreateSharedMemory(size_t size, int *idSharedMemory, shared_memory **sharedMemory_ptr){
@@ -583,6 +648,10 @@ void *verifyNewFile(void *folder_struct)
                 printLogScreen(mutexLogFile, config_file.log_file, newNotificationLog, newNotificationScreen);   // Imprimir en el log
                 closedir(((sucursal_dir *)folder_struct)->folder);                                               // Cerrar el directorio
                 ((sucursal_dir *)folder_struct)->folder = opendir(((sucursal_dir *)folder_struct)->folder_name); // Abrir el directorio de nuevo
+                printf("\n****************************************\n");
+                printf("\nPresione SPACE para detener el programa.\n");
+                printf("\n****************************************\n");
+                        
             }
 
             i += EVENT_SIZE + event->len; // Se actualiza el tamaño
@@ -724,7 +793,7 @@ void *processSucursalDirectory(void *folder_struct)
     {
         while ((directorio = readdir(((sucursal_dir *)folder_struct)->folder)) != NULL) // Leer el directorio
         {
-
+            
             if (directorio->d_type == DT_REG) // Comprobar que sea un archivo
             {
                 sprintf(filePath, "%s%s", ((sucursal_dir *)folder_struct)->folder_name, directorio->d_name); // Ruta al archivo
